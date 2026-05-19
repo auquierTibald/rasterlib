@@ -22,7 +22,7 @@ void *RL_LoadAsset(RL_AssetManager *am, const char* filePath, RL_AssetType type)
 
 RL_Texture *load_texture(const char* filePath);
 void free_texture(RL_Texture tex);
-pixel texture_sample(RL_Texture *tex, vec2 tex_coord);
+RL_Color texture_sample(RL_Texture *tex, vec2 tex_coord);
 
 RL_Mesh *init_mesh();
 RL_Mesh *load_mesh(const char* filePath);

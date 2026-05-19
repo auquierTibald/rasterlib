@@ -5,11 +5,11 @@
 #include "rasterlib.h"
 
 int main(int argc, char* argv[]) {
-    SDL_Window *window  = SDL_CreateWindow("rasterlib", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 900,800, 0);
+    SDL_Window *window  = SDL_CreateWindow("rasterlib", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 900,600, SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
     SDL_Event event;
 
-    RL_Context *context = RL_CreateContext(900, 800);
+    RL_Context *context = RL_CreateContext(900, 600, renderer);
 
     while (true) {
         while (SDL_PollEvent(&event)) {
@@ -20,6 +20,7 @@ int main(int argc, char* argv[]) {
             }
         }
         SDL_RenderClear(renderer);
+        RL_Clear(context, (RL_Color){.uint32 = 0xFF8814EF});
         RL_Render(context);
         SDL_RenderPresent(renderer);
     }

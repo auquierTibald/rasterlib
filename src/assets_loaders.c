@@ -17,18 +17,18 @@ void free_texture(RL_Texture tex)
     tex.pixels = NULL;
 }
 
-pixel texture_sample(RL_Texture *tex, vec2 tex_coord)
+RL_Color texture_sample(RL_Texture *tex, vec2 tex_coord)
 {
     tex_coord.x *= tex->w-1; tex_coord.x = abs((int)tex_coord.x % tex->w);
     tex_coord.y = tex->h - tex_coord.y * tex->h-1; tex_coord.y = abs((int)tex_coord.y % tex->h);
     int idx = (int)tex_coord.y * tex->w + (int)tex_coord.x;
     idx *= 4;
-    pixel pix;
-    pix.r = tex->pixels[idx];
-    pix.g = tex->pixels[idx + 1];
-    pix.b = tex->pixels[idx + 2];
-    if(tex->comps == 4) pix.a = tex->pixels[idx + 3];
-    else pix.a = 255;
+    RL_Color pix;
+    pix.argb.r = tex->pixels[idx];
+    pix.argb.g = tex->pixels[idx + 1];
+    pix.argb.b = tex->pixels[idx + 2];
+    if(tex->comps == 4) pix.argb.a = tex->pixels[idx + 3];
+    else pix.argb.a = 255;
     return pix;
 }
 

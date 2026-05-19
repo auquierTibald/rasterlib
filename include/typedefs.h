@@ -1,6 +1,7 @@
 #ifndef RASTERLIB_TYPEDEFS_H
 #define RASTERLIB_TYPEDEFS_H
 
+#include <stdint.h>
 #include <stddef.h>
 #include <utils.h>
 
@@ -56,9 +57,14 @@ typedef void (*RL_Shader)(struct RL_Context_t* context, RL_Triangle *triangle);
 #define RL_FRAGMENT_SHADER 1
 
 //TEXTURE TYPES
-typedef struct {
-    unsigned char r, g, b, a;
-} pixel;
+typedef struct { uint8_t a, r, g, b; } RL_Color_argb;
+
+typedef uint32_t RL_Color_uint32;
+
+typedef union {
+    RL_Color_argb argb;
+    RL_Color_uint32 uint32;
+} RL_Color;
 
 typedef struct {
     unsigned char* pixels;
