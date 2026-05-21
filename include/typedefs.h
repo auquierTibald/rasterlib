@@ -38,7 +38,7 @@ typedef struct
 
 //RENDERING TYPES
 
-typedef struct RL_Context_t;
+struct RL_Context_t;
 
 typedef struct {
     triangle3 pos;

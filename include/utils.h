@@ -28,7 +28,7 @@ do { \
 
 
 #define da_free(da_ptr) do { \
-    free(da_ptr); \
+    free((da_ptr)->data); \
     (da_ptr)->size = 0; \
     (da_ptr)->capacity = 0; \
 } while(0)

@@ -1,12 +1,11 @@
 #ifndef RASTERLIB_RASTERLIB_H
 #define RASTERLIB_RASTERLIB_H
 
-#include <pthread.h>
 #include <SDL2/SDL.h>
 #include "typedefs.h"
 #include "assets_loaders.h"
 
-#define N_THREADS 64
+#define N_THREADS 16
 
 typedef da(RL_Triangle) da_RL_Triangle;
 

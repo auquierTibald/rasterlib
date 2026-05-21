@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 4.1)
 project(rasterlib)
 
+add_compile_options(-Wall -Wextra -fpermissive -pthread)
 
 set(SRC main.c include/rasterlib.h
         include/typedefs.h
@@ -10,7 +11,6 @@ set(SRC main.c include/rasterlib.h
         src/assets_loaders.c
         src/utils-matrix.c
         src/rasterlib.c
-        src/shaders.c
         include/utils.h
 )
 

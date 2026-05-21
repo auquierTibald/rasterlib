@@ -2,7 +2,7 @@
 
 matrix mat_init(int rows, int cols) 
 {
-	matrix res = {.rows = rows, .cols = cols};
+	matrix res = {.data = NULL, .rows = rows, .cols = cols};
 	res.data = (float*)malloc(rows * cols * sizeof(float));
 	for(int i = 0; i < rows; i++)
 	{
@@ -48,15 +48,18 @@ matrix mat_mul(matrix mat1, matrix mat2)
 
 vec3 mat_apply(matrix mat, vec3 vertex)
 {
+	vec3 res;
 	float data[4] = {vertex.x, vertex.y, vertex.z, 1};
 	matrix vec = { .data = data, .rows = 4, .cols = 1 };
 
 	vec = mat_mul(mat, vec);
-
-	return (vec3){vec.data[0], vec.data[1], vec.data[2]};
+	if (!vec.data) return (vec3){0, 0, 0};
+	res = (vec3){vec.data[0], vec.data[1], vec.data[2]};
+	free(vec.data);
+	return res;
 }
 
-matrix mat_scale(matrix target, vec3 vector)
+void mat_scale(matrix *target, vec3 vector)
 {
 	matrix mat = mat_id(4);
 
@@ -64,10 +67,14 @@ matrix mat_scale(matrix target, vec3 vector)
 	mat.data[5] = vector.y;
 	mat.data[10] = vector.z;
 
-	return mat_mul(mat, target);
+	matrix res = mat_mul(mat, *target);
+	if (!res.data) return;
+	free(mat.data);
+	free(target->data);
+	target->data = res.data;
 }
 
-matrix mat_translate(matrix target, vec3 vector)
+void mat_translate(matrix *target, vec3 vector)
 {
 	matrix mat = mat_id(4);
 
@@ -75,10 +82,14 @@ matrix mat_translate(matrix target, vec3 vector)
 	mat.data[7] = vector.y;
 	mat.data[11] = vector.z;
 
-	return mat_mul(mat, target);
+	matrix res = mat_mul(mat, *target);
+	if (!res.data) return;
+	free(mat.data);
+	free(target->data);
+	target->data = res.data;
 }
 
-matrix mat_translate_invert(matrix target, vec3 vector)
+void mat_translate_invert(matrix *target, vec3 vector)
 {
 	matrix mat = mat_id(4);
 
@@ -86,10 +97,14 @@ matrix mat_translate_invert(matrix target, vec3 vector)
 	mat.data[7] -= vector.y;
 	mat.data[11] -= vector.z;
 
-	return mat_mul(mat, target);
+	matrix res = mat_mul(mat, *target);
+	if (!res.data) return;
+	free(mat.data);
+	free(target->data);
+	target->data = res.data;
 }
 
-matrix mat_rotate_yaw(matrix target, float angle)
+void mat_rotate_yaw(matrix *target, float angle)
 {
 	float c = cos(angle), s = sin(angle);
 	float data[4*4] = { c, -s, 0, 0,
@@ -99,10 +114,13 @@ matrix mat_rotate_yaw(matrix target, float angle)
 
 	matrix mat = { .data = data, .rows = 4, .cols = 4};
 
-	return mat_mul(mat, target);
+	matrix res = mat_mul(mat, *target);
+	if (!res.data) return;
+	free(target->data);
+	target->data = res.data;
 }
 
-matrix mat_rotate_pitch(matrix target, float angle)
+void mat_rotate_pitch(matrix *target, float angle)
 {
 	float c = cos(angle), s = sin(angle);
 	float data[4*4] = { c, 0, s, 0,
@@ -112,11 +130,14 @@ matrix mat_rotate_pitch(matrix target, float angle)
 
 	matrix mat = { .data = data, .rows = 4, .cols = 4};
 
-	return mat_mul(mat, target);
+	matrix res = mat_mul(mat, *target);
+	if (!res.data) return;
+	free(target->data);
+	target->data = res.data;
 }
 
 
-matrix mat_rotate_roll(matrix target, float angle)
+void mat_rotate_roll(matrix *target, float angle)
 {
 	float c = cos(angle), s = sin(angle);
 	float data[4*4] = { 1, 0, 0, 0,
@@ -126,7 +147,10 @@ matrix mat_rotate_roll(matrix target, float angle)
 
 	matrix mat = { .data = data, .rows = 4, .cols = 4};
 
-	return mat_mul(mat, target);
+	matrix res = mat_mul(mat, *target);
+	if (!res.data) return;
+	free(target->data);
+	target->data = res.data;
 }
 
 

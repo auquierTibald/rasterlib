@@ -109,13 +109,13 @@ RL_Mesh *load_mesh(const char* filePath)
 
 void free_mesh(RL_Mesh *mesh)
 {
-    da_free(&mesh->v_coords);
-    da_free(&mesh->v_tex_coords);
-    da_free(&mesh->v_normals);
+    da_free(&(mesh->v_coords));
+    da_free(&(mesh->v_tex_coords));
+    da_free(&(mesh->v_normals));
 
-    da_free(&mesh->i_coords);
-    da_free(&mesh->i_tex_coords);
-    da_free(&mesh->i_normals);
+    da_free(&(mesh->i_coords));
+    da_free(&(mesh->i_tex_coords));
+    da_free(&(mesh->i_normals));
 }
 
 
@@ -124,13 +124,16 @@ void *RL_LoadAsset(RL_AssetManager *am, const char* filePath, RL_AssetType type)
     da_foreach(am, RL_Asset) {
         if (!strcmp(filePath, element->source) && type == element->type) return element->data;
     }
-    void* data = NULL;
+    void* data;
     switch(type) {
         case RL_ASSET_TYPE_MESH:
             data = load_mesh(filePath);
             break;
         case RL_ASSET_TYPE_TEXTURE:
             data = load_texture(filePath);
+            break;
+        default:
+            data = NULL;
             break;
     }
     RL_Asset asset = {.source = filePath, .type = type, .data = data};
