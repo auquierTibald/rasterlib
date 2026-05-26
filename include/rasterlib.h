@@ -8,10 +8,14 @@
 #define N_THREADS 16
 
 typedef da(RL_Triangle) da_RL_Triangle;
-
+typedef da(RL_Fragment) da_RL_Fragment;
 
 typedef struct RL_Context_t {
+    int width, height;
+    float ratio;
+
     pthread_t threads[N_THREADS];
+    pthread_mutex_t mutex;
 
     RL_Color *color_buffer;
     double   *depth_buffer;
@@ -19,15 +23,15 @@ typedef struct RL_Context_t {
     RL_Bucket vertex_buckets[N_THREADS];
     RL_Bucket fragment_buckets[N_THREADS];
 
-    da_RL_Triangle vertex_buffer;
-    da_RL_Triangle fragment_buffer;
-    RL_Shader vertex_shader, fragment_shader;
+    da_RL_Triangle vertex_input_buffer, vertex_output_buffer;
+    da_RL_Fragment fragment_buffer;
+    RL_VertexShader vertex_shader;
+    RL_FragmentShader fragment_shader;
 
-    int width, height;
     RL_Texture *texture;
     matrix model_matrix, view_matrix;
 
-    RL_AssetManager *asset_manager;
+    RL_AssetManager asset_manager;
 
     SDL_Renderer *renderer;
     SDL_Texture *screen_texture;
@@ -45,8 +49,9 @@ void RL_SetViewMatrix(RL_Context* context, matrix view_matrix);
 void RL_Pixel(RL_Context* context, int x, int y, RL_Color c);
 void RL_Clear(RL_Context* context, RL_Color c);
 
-void RL_UseShader(RL_Context* context, RL_Shader shader, int shader_type);
+void RL_UseShader(RL_Context* context, RL_VertexShader vs, RL_FragmentShader fs);
 void RL_TriangleData(RL_Context* context, RL_Triangle* data, size_t size);
+void RL_MeshData(RL_Context* context, RL_Mesh* mesh);
 void RL_Render(RL_Context* context);
 
 

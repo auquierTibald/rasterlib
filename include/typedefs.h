@@ -3,7 +3,9 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <utils.h>
+#include <utils-da.h>
+
+#define FAR_PLANE 100000
 
 //BASIC GEOMETRY TYPES
 typedef struct {
@@ -22,6 +24,12 @@ typedef struct {
     float x, y ,z;
 } vec3;
 
+#define ivec2(x, y) (ivec2){(x), (y)}
+#define ivec3(x, y, z) (ivec3){(x), (y), (z)}
+
+#define vec2(x, y) (vec2){(x), (y)}
+#define vec3(x, y, z) (vec3){(x), (y), (z)}
+
 typedef struct {
     vec2 a, b, c;
 } triangle2;
@@ -36,6 +44,12 @@ typedef struct
     int rows, cols;
 } matrix;
 
+//COLOR UNION TYPE
+typedef union {
+    struct { uint8_t a, r, g, b; } argb;
+    uint32_t uint32;
+} RL_Color;
+
 //RENDERING TYPES
 
 struct RL_Context_t;
@@ -47,24 +61,30 @@ typedef struct {
 } RL_Triangle;
 
 typedef struct {
+    RL_Triangle *tri;
+
+    ivec2 pos;
+    vec2 tex_coord;
+    vec3 normal;
+
+    vec3 weights;
+    float depth;
+
+    RL_Color color;
+} RL_Fragment;
+
+typedef struct {
     struct RL_Context_t *context;
     size_t start, end;
 } RL_Bucket;
 
-typedef void (*RL_Shader)(struct RL_Context_t* context, RL_Triangle *triangle);
+typedef void (*RL_VertexShader)(struct RL_Context_t* context, RL_Triangle *triangle);
+typedef void (*RL_FragmentShader)(struct RL_Context_t* context, RL_Fragment *fragment);
 
 #define RL_VERTEX_SHADER 0
 #define RL_FRAGMENT_SHADER 1
 
 //TEXTURE TYPES
-typedef struct { uint8_t a, r, g, b; } RL_Color_argb;
-
-typedef uint32_t RL_Color_uint32;
-
-typedef union {
-    RL_Color_argb argb;
-    RL_Color_uint32 uint32;
-} RL_Color;
 
 typedef struct {
     unsigned char* pixels;
@@ -90,7 +110,7 @@ typedef struct {
 typedef struct {
     RL_Mesh *mesh;
     RL_Texture *tex;
-    RL_Shader vertex_shader, fragment_shader;
+    RL_VertexShader vertex_shader, fragment_shader;
     matrix model_matrix;
 } RL_Model;
 

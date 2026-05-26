@@ -12,6 +12,8 @@ set(SRC main.c include/rasterlib.h
         src/utils-matrix.c
         src/rasterlib.c
         include/utils.h
+        src/utils.c
+        include/utils-da.h
 )
 
 add_executable(rasterlib ${SRC})
