@@ -49,7 +49,8 @@ void RL_SetViewMatrix(RL_Context* context, matrix view_matrix);
 void RL_Pixel(RL_Context* context, int x, int y, RL_Color c);
 void RL_Clear(RL_Context* context, RL_Color c);
 
-void RL_UseShader(RL_Context* context, RL_VertexShader vs, RL_FragmentShader fs);
+void RL_SetVertexShader(RL_Context* context, RL_VertexShader shader);
+void RL_SetFragmentShader(RL_Context* context, RL_FragmentShader shader);
 void RL_TriangleData(RL_Context* context, RL_Triangle* data, size_t size);
 void RL_MeshData(RL_Context* context, RL_Mesh* mesh);
 void RL_Render(RL_Context* context);

@@ -25,9 +25,9 @@ void default_vs(struct RL_Context_t *context, RL_Triangle *triangle)
 }
 
 void default_fs(struct RL_Context_t *context, RL_Fragment *frag) {
-    //frag->color = texture_sample(context->texture, frag->tex_coord);
-    frag->color = (RL_Color){.uint32 = 0xFF0000FF};
+    frag->color = texture_sample(context->texture, frag->tex_coord);
 }
+
 
 RL_Context* RL_CreateContext(int width, int heigth, SDL_Renderer* renderer)
 {
@@ -104,13 +104,8 @@ void RL_Clear(RL_Context* context, RL_Color c)
     }
 }
 
-
-
-void RL_UseShader(RL_Context* context, RL_VertexShader vs, RL_FragmentShader fs)
-{
-    context->vertex_shader = vs;
-    context->fragment_shader = fs;
-}
+void RL_SetVertexShader(RL_Context* context, RL_VertexShader shader) { context->vertex_shader = shader; }
+void RL_SetFragmentShader(RL_Context* context, RL_FragmentShader shader)   { context->fragment_shader = shader; }
 
 void RL_TriangleData(RL_Context* context, RL_Triangle* data, size_t size)
 {
@@ -146,11 +141,11 @@ void RL_MeshData(RL_Context* context, RL_Mesh* mesh)
     }
 }
 
-RL_Bucket create_vertex_bucket(RL_Context* context, size_t i, size_t size) {
+RL_Bucket create_bucket(RL_Context* context, size_t i, size_t size) {
     RL_Bucket bucket = {.context = context};
-    bucket.start = i * size;
-    if (i == N_THREADS-1) bucket.end = context->vertex_input_buffer.size;
-    else bucket.end = bucket.start + size;
+    bucket.start = i * size/N_THREADS;
+    if (i == N_THREADS-1) bucket.end = size;
+    else bucket.end = bucket.start + size/N_THREADS;
     return bucket;
 }
 
@@ -162,12 +157,37 @@ void* call_vertex_bucket(void* args) {
     return NULL;
 }
 
-RL_Bucket create_fragment_bucket(RL_Context* context, size_t i, size_t size) {
-    RL_Bucket bucket = {.context = context};
-    bucket.start = i * size;
-    if (i == N_THREADS-1) bucket.end = context->fragment_buffer.size;
-    else bucket.end = bucket.start + size;
-    return bucket;
+void prepare_triangle(RL_Context* context, RL_Triangle *tri) {
+    //2D POINTS
+    ivec2 v1 = ivec2( (int)tri->pos.a.x, (int)tri->pos.a.y);
+    ivec2 v2 = ivec2( (int)tri->pos.b.x, (int)tri->pos.b.y);
+    ivec2 v3 = ivec2( (int)tri->pos.c.x, (int)tri->pos.c.y);
+
+    int minx = min3(v1.x, v2.x, v3.x); clamp(&minx, 0, context->width);
+    int miny = min3(v1.y, v2.y, v3.y); clamp(&miny, 0, context->height);
+    int maxx = max3(v1.x, v2.x, v3.x); clamp(&maxx, 0, context->width);
+    int maxy = max3(v1.y, v2.y, v3.y); clamp(&maxy, 0, context->height);
+
+    for(int x = minx ; x < maxx ; x++) {
+        for(int y = miny ; y < maxy; y++) {
+            RL_Fragment frag = (RL_Fragment) {
+                .tri = tri,
+                .pos = ivec2(x, y)
+            };
+            pthread_mutex_lock(&context->mutex);
+            da_append(&context->fragment_buffer, RL_Fragment, frag);
+            pthread_mutex_unlock(&context->mutex);
+        }
+    }
+
+}
+
+void* call_prepare_bucket(void* args) {
+    RL_Bucket* bucket = (RL_Bucket*) args;
+    RL_Context* context = (RL_Context*) bucket->context;
+    da_range(&context->vertex_output_buffer, RL_Triangle, bucket->start, bucket->end)
+        prepare_triangle(context, element);
+    return NULL;
 }
 
 void draw_fragment(RL_Context* context, RL_Fragment* frag) {
@@ -217,51 +237,32 @@ void* call_fragment_bucket(void* args) {
     return NULL;
 }
 
-void prepare_triangle(RL_Context* context, RL_Triangle *tri) {
-    //2D POINTS
-    ivec2 v1 = ivec2( (int)tri->pos.a.x, (int)tri->pos.a.y);
-    ivec2 v2 = ivec2( (int)tri->pos.b.x, (int)tri->pos.b.y);
-    ivec2 v3 = ivec2( (int)tri->pos.c.x, (int)tri->pos.c.y);
-
-    int minx = min3(v1.x, v2.x, v3.x); clamp(&minx, 0, context->width);
-    int miny = min3(v1.y, v2.y, v3.y); clamp(&miny, 0, context->height);
-    int maxx = max3(v1.x, v2.x, v3.x); clamp(&maxx, 0, context->width);
-    int maxy = max3(v1.y, v2.y, v3.y); clamp(&maxy, 0, context->height);
-
-    for(int x = minx ; x < maxx ; x++) {
-        for(int y = miny ; y < maxy; y++) {
-            RL_Fragment frag = (RL_Fragment) {
-                .tri = tri,
-                .pos = ivec2(x, y)
-            };
-            da_append(&context->fragment_buffer, RL_Fragment, frag);
-        }
-    }
-
-}
-
 void RL_Render(RL_Context* context) {
     da_clear(&(context->vertex_output_buffer));
     da_clear(&(context->fragment_buffer));
-    size_t size = context->vertex_input_buffer.size / N_THREADS;
+    size_t size = context->vertex_input_buffer.size;
 
     //CALLING VERTEX SHADERS
     for (size_t i = 0; i < N_THREADS; i++) {
-        context->vertex_buckets[i] = create_vertex_bucket(context, i, size);
+        context->vertex_buckets[i] = create_bucket(context, i, size);
         pthread_create(&context->threads[i], NULL, call_vertex_bucket, &context->vertex_buckets[i]);
     }
     for (size_t i = 0; i < N_THREADS; i++) pthread_join(context->threads[i], NULL);
 
-    //PREPARE FRAGMENTS OF EACH TRIANGLE
-    da_foreach(&context->vertex_output_buffer, RL_Triangle){
-        prepare_triangle(context, element);
-    }
+    size = context->vertex_output_buffer.size;
 
-    size = context->fragment_buffer.size / N_THREADS;
+    //PREPARING FRAGMENTS OF EACH TRIANGLE
+    for (size_t i = 0; i < N_THREADS; i++) {
+        context->fragment_buckets[i] = create_bucket(context, i, size);
+        pthread_create(&context->threads[i], NULL, call_prepare_bucket, &context->fragment_buckets[i]);
+    }
+    for (size_t i = 0; i < N_THREADS; i++) pthread_join(context->threads[i], NULL);
+
+    size = context->fragment_buffer.size;
 
     //CALLING FRAGMENT SHADERS
     for (size_t i = 0; i < N_THREADS; i++) {
-        context->fragment_buckets[i] = create_fragment_bucket(context, i, size);
+        context->fragment_buckets[i] = create_bucket(context, i, size);
         pthread_create(&context->threads[i], NULL, call_fragment_bucket, &context->fragment_buckets[i]);
     }
     for (size_t i = 0; i < N_THREADS; i++) pthread_join(context->threads[i], NULL);
