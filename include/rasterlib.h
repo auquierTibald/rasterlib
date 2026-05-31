@@ -5,7 +5,7 @@
 #include "typedefs.h"
 #include "assets_loaders.h"
 
-#define N_THREADS 16
+#define N_THREADS 8
 
 typedef da(RL_Triangle) da_RL_Triangle;
 typedef da(RL_Fragment) da_RL_Fragment;
@@ -18,13 +18,12 @@ typedef struct RL_Context_t {
     pthread_mutex_t mutex;
 
     RL_Color *color_buffer;
-    double   *depth_buffer;
+    float   *depth_buffer;
 
     RL_Bucket vertex_buckets[N_THREADS];
     RL_Bucket fragment_buckets[N_THREADS];
 
     da_RL_Triangle vertex_input_buffer, vertex_output_buffer;
-    da_RL_Fragment fragment_buffer;
     RL_VertexShader vertex_shader;
     RL_FragmentShader fragment_shader;
 
