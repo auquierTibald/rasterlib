@@ -29,9 +29,12 @@ vec2 perp(vec2 v);
 ivec2 iperp(ivec2 v);
 
 float signedAreaTriangle(vec2 a, vec2 b, vec2 c);
-float iSignedAreaTriangle(ivec2 a, ivec2 b, ivec2 c);
 
-bool pointInTriangle(ivec2 a, ivec2 b, ivec2 c, ivec2 p, vec3 *out);
+int iSignedAreaTriangle(ivec2 a, ivec2 b, ivec2 c);
+
+vec3 barycentric_coordinates(ivec3 weights);
+
+bool pointInTriangle(vec3 weights);
 
 float toScreen(float coord, int size);
 vec3 project_vertex(RL_Context* context, vec3 vertex);

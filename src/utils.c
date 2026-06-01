@@ -102,38 +102,24 @@ vec3 diff3(vec3 target, vec3 value)
 vec2 perp(vec2 v) { return vec2(v.y, -v.x); }
 ivec2 iperp(ivec2 v) { return ivec2(v.y, -v.x); }
 
-float signedAreaTriangle(vec2 a, vec2 b, vec2 c)
+int iSignedAreaTriangle(ivec2 a, ivec2 b, ivec2 c)
 {
-    vec2 ac = (vec2){c.x - a.x, c.y - a.y};
-    vec2 abPerp = perp((vec2){b.x - a.x, b.y - a.y});
-    return dot2(ac, abPerp) / 2;
+    return (a.y - b.y) * c.x + (b.x - a.x) * c.y + (a.x * b.y - a.y * b.x);
 }
 
-float iSignedAreaTriangle(ivec2 a, ivec2 b, ivec2 c)
-{
-    ivec2 ac = ivec2(c.x - a.x, c.y - a.y);
-    ivec2 abPerp = iperp(ivec2(b.x - a.x, b.y - a.y));
-    return (float)idot2(ac, abPerp) / 2;
+vec3 barycentric_coordinates(ivec3 weights) {
+    float sum = weights.x + weights.y + weights.z;
+    return vec3((float)weights.x / sum, (float)weights.y / sum, (float)weights.z / sum);
 }
 
-
-bool pointInTriangle(ivec2 a, ivec2 b, ivec2 c, ivec2 p, vec3 *out)
+bool pointInTriangle(vec3 weights)
 {
-    float sideAB = iSignedAreaTriangle(a, b, p);
-    float sideBC = iSignedAreaTriangle(b, c, p);
-    float sideCA = iSignedAreaTriangle(c, a, p);
+    bool inside = (weights.x <= 0 && weights.y <= 0 && weights.z <= 0) || (weights.x >= 0 && weights.y >= 0 && weights.z >= 0);
+    if (!inside) return false;
+    float sum = weights.x + weights.y + weights.z;
+    if (sum == 0 ) return false;
 
-    //bool inside = sideAB >= 0 && sideBC >= 0 && sideCA >= 0;
-    bool inside = ( (sideAB >= 0) == (sideBC >= 0) && (sideBC >= 0) == (sideCA >= 0) )
-                ||( (sideAB <= 0) == (sideBC <= 0) && (sideBC <= 0) == (sideCA <= 0) );
-    float sum = sideAB + sideBC + sideCA;
-    float invAreaSum = 1 / (sum);
-
-    out->x = sideBC * invAreaSum; if(out->x < 0) out->x *= -1;
-    out->y = sideCA * invAreaSum; if(out->y < 0) out->y *= -1;
-    out->z = sideAB * invAreaSum; if(out->z < 0) out->z *= -1;
-
-    return inside && sum != 0;
+    return true;
 }
 
 float toScreen(float coord, int size)

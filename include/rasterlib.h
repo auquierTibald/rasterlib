@@ -23,7 +23,7 @@ typedef struct RL_Context_t {
     RL_Bucket vertex_buckets[N_THREADS];
     RL_Bucket fragment_buckets[N_THREADS];
 
-    da_RL_Triangle vertex_input_buffer, vertex_output_buffer;
+    da_RL_Triangle vertex_input_buffer, fragment_buffer;
     RL_VertexShader vertex_shader;
     RL_FragmentShader fragment_shader;
 

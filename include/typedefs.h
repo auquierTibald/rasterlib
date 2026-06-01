@@ -67,7 +67,7 @@ typedef struct {
     vec2 tex_coord;
     vec3 normal;
 
-    vec3 weights;
+    vec3 barycentric_coord;
     float depth;
 
     RL_Color color;

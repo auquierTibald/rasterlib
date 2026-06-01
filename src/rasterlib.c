@@ -20,7 +20,7 @@ void default_vs(struct RL_Context_t *context, RL_Triangle *triangle)
      // };
     RL_Triangle new = { .pos = mvp, .tex = triangle->tex, .normal = triangle->normal };
     pthread_mutex_lock(&context->mutex);
-    da_append(&context->vertex_output_buffer, RL_Triangle, new);
+    da_append(&context->fragment_buffer, RL_Triangle, new);
     pthread_mutex_unlock(&context->mutex);
 }
 
@@ -46,7 +46,7 @@ RL_Context* RL_CreateContext(int width, int heigth, SDL_Renderer* renderer)
     context->depth_buffer = (float*)malloc(width * heigth * sizeof(float));
 
     context->vertex_input_buffer = (da_RL_Triangle)da_alloc(RL_Triangle, 1);
-    context->vertex_output_buffer = (da_RL_Triangle)da_alloc(RL_Triangle, 1);
+    context->fragment_buffer = (da_RL_Triangle)da_alloc(RL_Triangle, 1);
     context->asset_manager = (RL_AssetManager)da_alloc(RL_Asset, 1);
 
     context->screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, heigth);
@@ -58,7 +58,7 @@ void RL_DestroyContext(RL_Context* context)
     if (context->color_buffer) free(context->color_buffer);
     if (context->depth_buffer) free(context->depth_buffer);
     if (context->vertex_input_buffer.data) da_free(&(context->vertex_input_buffer));
-    if (context->vertex_output_buffer.data) da_free(&(context->vertex_output_buffer));
+    if (context->fragment_buffer.data) da_free(&(context->fragment_buffer));
     free(context);
 }
 
@@ -141,44 +141,6 @@ void RL_MeshData(RL_Context* context, RL_Mesh* mesh)
     }
 }
 
-void draw_fragment(RL_Context* context, RL_Fragment* frag) {
-
-    ivec2 v1 = ivec2( (int)frag->tri->pos.a.x, (int)frag->tri->pos.a.y);
-    ivec2 v2 = ivec2( (int)frag->tri->pos.b.x, (int)frag->tri->pos.b.y);
-    ivec2 v3 = ivec2( (int)frag->tri->pos.c.x, (int)frag->tri->pos.c.y);
-
-    vec3 depths = vec3(frag->tri->pos.a.z, frag->tri->pos.b.z, frag->tri->pos.c.z);
-
-    if ( pointInTriangle(v1, v2, v3, frag->pos, &frag->weights)) {
-
-        frag->depth = 1 / dot3(vec3(1 / depths.x, 1 / depths.y, 1 / depths.z), frag->weights);
-
-        pthread_mutex_lock(&context->mutex);
-        if(frag->depth >= context->depth_buffer[screen_index(context->width, frag->pos)]) {
-            pthread_mutex_unlock(&context->mutex);
-            return;
-        }
-        pthread_mutex_unlock(&context->mutex);
-
-        //TEXTURE COORDINATES INTERPOLATION
-        frag->tex_coord = product2(product2( frag->tri->tex.a, 1/depths.x ), frag->weights.x);
-        frag->tex_coord = sum2(frag->tex_coord, product2(product2( frag->tri->tex.b, 1/depths.y ), frag->weights.y));
-        frag->tex_coord = sum2(frag->tex_coord, product2(product2( frag->tri->tex.c, 1/depths.z ), frag->weights.z));
-        frag->tex_coord = product2(frag->tex_coord, frag->depth);
-
-        context->fragment_shader(context, frag);
-
-        pthread_mutex_lock(&context->mutex);
-        if(frag->depth >= context->depth_buffer[screen_index(context->width, frag->pos)]) {
-            pthread_mutex_unlock(&context->mutex);
-            return;
-        }
-        context->color_buffer[screen_index(context->width, frag->pos)] = frag->color;
-        context->depth_buffer[screen_index(context->width, frag->pos)] = frag->depth;
-        pthread_mutex_unlock(&context->mutex);
-    }
-}
-
 void draw_triangle(RL_Context* context, RL_Triangle *tri) {
     //2D POINTS
     ivec2 v1 = ivec2( (int)tri->pos.a.x, (int)tri->pos.a.y);
@@ -191,15 +153,24 @@ void draw_triangle(RL_Context* context, RL_Triangle *tri) {
     int maxy = max3(v1.y, v2.y, v3.y); clamp(&maxy, 0, context->height);
 
     vec3 depths = vec3(tri->pos.a.z, tri->pos.b.z, tri->pos.c.z);
-    
-    for(int x = minx ; x < maxx ; x++) {
-        for(int y = miny ; y < maxy; y++) {
 
-            RL_Fragment frag = {.tri = tri, .pos = ivec2(x, y)};
+    int A12 = v1.y - v2.y, B12 = v2.x - v1.x;
+    int A23 = v2.y - v3.y, B23 = v3.x - v2.x;
+    int A31 = v3.y - v1.y, B31 = v1.x - v3.x;
 
-            if ( pointInTriangle(v1, v2, v3, frag.pos, &frag.weights)) {
+    ivec2 start = ivec2(minx, miny);
+    int w1_row = iSignedAreaTriangle(v2, v3, start);
+    int w2_row = iSignedAreaTriangle(v3, v1, start);
+    int w3_row = iSignedAreaTriangle(v1, v2, start);
+    for(int y = miny ; y < maxy ; y++) {
 
-                frag.depth = 1 / dot3(vec3(1 / depths.x, 1 / depths.y, 1 / depths.z), frag.weights);
+        ivec3 weights = ivec3(w1_row, w2_row, w3_row);
+
+        for(int x = minx ; x < maxx; x++) {
+            RL_Fragment frag = {.tri = tri, .pos = ivec2(x, y), .barycentric_coord = barycentric_coordinates(weights)};
+
+            if ( pointInTriangle(frag.barycentric_coord)) {
+                frag.depth = 1 / dot3(vec3(1 / depths.x, 1 / depths.y, 1 / depths.z), frag.barycentric_coord);
 
                 pthread_mutex_lock(&context->mutex);
                 if(frag.depth >= context->depth_buffer[screen_index(context->width, frag.pos)]) {
@@ -209,9 +180,9 @@ void draw_triangle(RL_Context* context, RL_Triangle *tri) {
                 pthread_mutex_unlock(&context->mutex);
 
                 //TEXTURE COORDINATES INTERPOLATION
-                frag.tex_coord = product2(product2( tri->tex.a, 1/depths.x ), frag.weights.x);
-                frag.tex_coord = sum2(frag.tex_coord, product2(product2( tri->tex.b, 1/depths.y ), frag.weights.y));
-                frag.tex_coord = sum2(frag.tex_coord, product2(product2( tri->tex.c, 1/depths.z ), frag.weights.z));
+                frag.tex_coord = product2(product2( tri->tex.a, 1/depths.x ), frag.barycentric_coord.x);
+                frag.tex_coord = sum2(frag.tex_coord, product2(product2( tri->tex.b, 1/depths.y ), frag.barycentric_coord.y));
+                frag.tex_coord = sum2(frag.tex_coord, product2(product2( tri->tex.c, 1/depths.z ), frag.barycentric_coord.z));
                 frag.tex_coord = product2(frag.tex_coord, frag.depth);
 
                 context->fragment_shader(context, &frag);
@@ -225,7 +196,15 @@ void draw_triangle(RL_Context* context, RL_Triangle *tri) {
                 context->depth_buffer[screen_index(context->width, frag.pos)] = frag.depth;
                 pthread_mutex_unlock(&context->mutex);
             }
+            weights.x += A23;
+            weights.y += A31;
+            weights.z += A12;
         }
+
+        w1_row += B23;
+        w2_row += B31;
+        w3_row += B12;
+
     }
 
 }
@@ -238,7 +217,7 @@ RL_Bucket create_bucket(RL_Context* context, size_t i, size_t size) {
     }
     bucket.start = i * size/N_THREADS;
     if (i == N_THREADS-1) bucket.end = size;
-    else bucket.end = bucket.start + size/N_THREADS;
+    else bucket.end = (i+1) * size/N_THREADS;
     return bucket;
 }
 
@@ -253,13 +232,13 @@ void* call_vertex_bucket(void* args) {
 void* call_fragment_bucket(void* args) {
     RL_Bucket* bucket = args;
     RL_Context* context = bucket->context;
-    da_range(&context->vertex_output_buffer, RL_Triangle, bucket->start, bucket->end)
+    da_range(&context->fragment_buffer, RL_Triangle, bucket->start, bucket->end)
         draw_triangle(context, element);
     return NULL;
 }
 
 void RL_Render(RL_Context* context) {
-    da_clear(&(context->vertex_output_buffer));
+    da_clear(&(context->fragment_buffer));
     size_t size = context->vertex_input_buffer.size;
 
     //CALLING VERTEX SHADERS
@@ -269,7 +248,7 @@ void RL_Render(RL_Context* context) {
     }
     for (size_t i = 0; i < N_THREADS; i++) pthread_join(context->threads[i], NULL);
 
-    size = context->vertex_output_buffer.size;
+    size = context->fragment_buffer.size;
 
     //CALLING FRAGMENT SHADERS
     for (size_t i = 0; i < N_THREADS; i++) {

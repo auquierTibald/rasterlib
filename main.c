@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
     SDL_Event event;
 
-    RL_Context *context = RL_CreateContext(1600/3, 900/3, renderer);
+    RL_Context *context = RL_CreateContext(1600/2, 900/2, renderer);
     RL_Mesh *mesh = RL_LoadAsset(&context->asset_manager, "/home/tibald/CLionProjects/Im3dSoftRenderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
     RL_Texture *tex = RL_LoadAsset(&context->asset_manager, "/home/tibald/CLionProjects/Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
 
@@ -87,6 +87,7 @@ int main(int argc, char* argv[]) {
          RL_SetViewMatrix(context, view);
          RL_Render(context);
 
+
         //BACKGROUND
         RL_TriangleData(context, triangles, N_TRIANGLES);
         RL_SetFragmentShader(context, blue_fs);
@@ -95,6 +96,8 @@ int main(int argc, char* argv[]) {
         mat_translate(&model, vec3(0, 0, 300));
         RL_SetModelMatrix(context, model);
         RL_Render(context);
+
+
 
         free(model.data);
         free(view.data);
