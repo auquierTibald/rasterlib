@@ -46,8 +46,8 @@ typedef struct
 
 //COLOR UNION TYPE
 typedef union {
-    struct { uint8_t b, g, r, a; } argb;
-    uint32_t uint32;
+    struct { unsigned short b:4, g:4, r:4, a:4; } argb;
+    uint16_t uint16;
 } RL_Color;
 
 //RENDERING TYPES
@@ -84,7 +84,7 @@ typedef void (*RL_FragmentShader)(struct RL_Context_t* context, RL_Fragment *fra
 #define RL_VERTEX_SHADER 0
 #define RL_FRAGMENT_SHADER 1
 
-//TEXTURE TYPES
+//TEXTURE TYPE
 
 typedef struct {
     unsigned char* pixels;

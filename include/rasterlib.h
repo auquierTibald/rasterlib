@@ -52,7 +52,7 @@ void RL_SetVertexShader(RL_Context* context, RL_VertexShader shader);
 void RL_SetFragmentShader(RL_Context* context, RL_FragmentShader shader);
 void RL_TriangleData(RL_Context* context, RL_Triangle* data, size_t size);
 void RL_MeshData(RL_Context* context, RL_Mesh* mesh);
-void RL_Render(RL_Context* context);
+void RL_Draw(RL_Context* context);
 
 
 #endif //RASTERLIB_RASTERLIB_H

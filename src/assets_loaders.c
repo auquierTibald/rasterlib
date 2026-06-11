@@ -24,11 +24,11 @@ RL_Color texture_sample(RL_Texture *tex, vec2 tex_coord)
     int idx = (int)tex_coord.y * tex->w + (int)tex_coord.x;
     idx *= 4;
     RL_Color pix;
-    pix.argb.r = tex->pixels[idx];
-    pix.argb.g = tex->pixels[idx + 1];
-    pix.argb.b = tex->pixels[idx + 2];
-    if(tex->comps == 4) pix.argb.a = tex->pixels[idx + 3];
-    else pix.argb.a = 255;
+    pix.argb.r = (float)tex->pixels[idx] / 256 * 16;
+    pix.argb.g = (float)tex->pixels[idx + 1] / 256 * 16;
+    pix.argb.b = (float)tex->pixels[idx + 2] / 256 * 16;
+    if(tex->comps == 4) pix.argb.a = tex->pixels[idx + 3] / 256 * 16;
+    else pix.argb.a = 15;
     return pix;
 }
 

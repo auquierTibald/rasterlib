@@ -26,7 +26,7 @@ void default_vs(struct RL_Context_t *context, RL_Triangle *triangle)
 
 void default_fs(struct RL_Context_t *context, RL_Fragment *frag) {
     //color = texture_sample(context->texture, tex_coord);
-    frag->color = (RL_Color){.uint32 = frag->depth };
+    frag->color = (RL_Color){.uint16 = frag->depth };
 }
 
 
@@ -49,7 +49,7 @@ RL_Context* RL_CreateContext(int width, int heigth, SDL_Renderer* renderer)
     context->fragment_buffer = (da_RL_Triangle)da_alloc(RL_Triangle, 1);
     context->asset_manager = (RL_AssetManager)da_alloc(RL_Asset, 1);
 
-    context->screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, heigth);
+    context->screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, width, heigth);
     return context;
 }
 
@@ -141,6 +141,35 @@ void RL_MeshData(RL_Context* context, RL_Mesh* mesh)
     }
 }
 
+void draw_fragment(RL_Context* context, RL_Fragment *frag) {
+    vec3 depths = vec3(frag->tri->pos.a.z, frag->tri->pos.b.z, frag->tri->pos.c.z);
+    frag->depth = 1 / dot3(vec3(1 / depths.x, 1 / depths.y, 1 / depths.z), frag->barycentric_coord);
+
+    pthread_mutex_lock(&context->mutex);
+    if(frag->depth >= context->depth_buffer[screen_index(context->width, frag->pos)]) {
+        pthread_mutex_unlock(&context->mutex);
+        return;
+    }
+    pthread_mutex_unlock(&context->mutex);
+
+    //TEXTURE COORDINATES INTERPOLATION
+    frag->tex_coord = product2(product2( frag->tri->tex.a, 1/depths.x ), frag->barycentric_coord.x);
+    frag->tex_coord = sum2(frag->tex_coord, product2(product2( frag->tri->tex.b, 1/depths.y ), frag->barycentric_coord.y));
+    frag->tex_coord = sum2(frag->tex_coord, product2(product2( frag->tri->tex.c, 1/depths.z ), frag->barycentric_coord.z));
+    frag->tex_coord = product2(frag->tex_coord, frag->depth);
+
+    context->fragment_shader(context, frag);
+
+    pthread_mutex_lock(&context->mutex);
+    if(frag->depth >= context->depth_buffer[screen_index(context->width, frag->pos)]) {
+        pthread_mutex_unlock(&context->mutex);
+        return;
+    }
+    context->color_buffer[screen_index(context->width, frag->pos)] = frag->color;
+    context->depth_buffer[screen_index(context->width, frag->pos)] = frag->depth;
+    pthread_mutex_unlock(&context->mutex);
+}
+
 void draw_triangle(RL_Context* context, RL_Triangle *tri) {
     //2D POINTS
     ivec2 v1 = ivec2( (int)tri->pos.a.x, (int)tri->pos.a.y);
@@ -168,34 +197,8 @@ void draw_triangle(RL_Context* context, RL_Triangle *tri) {
 
         for(int x = minx ; x < maxx; x++) {
             RL_Fragment frag = {.tri = tri, .pos = ivec2(x, y), .barycentric_coord = barycentric_coordinates(weights)};
-
-            if ( pointInTriangle(frag.barycentric_coord)) {
-                frag.depth = 1 / dot3(vec3(1 / depths.x, 1 / depths.y, 1 / depths.z), frag.barycentric_coord);
-
-                pthread_mutex_lock(&context->mutex);
-                if(frag.depth >= context->depth_buffer[screen_index(context->width, frag.pos)]) {
-                    pthread_mutex_unlock(&context->mutex);
-                    continue;
-                }
-                pthread_mutex_unlock(&context->mutex);
-
-                //TEXTURE COORDINATES INTERPOLATION
-                frag.tex_coord = product2(product2( tri->tex.a, 1/depths.x ), frag.barycentric_coord.x);
-                frag.tex_coord = sum2(frag.tex_coord, product2(product2( tri->tex.b, 1/depths.y ), frag.barycentric_coord.y));
-                frag.tex_coord = sum2(frag.tex_coord, product2(product2( tri->tex.c, 1/depths.z ), frag.barycentric_coord.z));
-                frag.tex_coord = product2(frag.tex_coord, frag.depth);
-
-                context->fragment_shader(context, &frag);
-
-                pthread_mutex_lock(&context->mutex);
-                if(frag.depth >= context->depth_buffer[screen_index(context->width, frag.pos)]) {
-                    pthread_mutex_unlock(&context->mutex);
-                    continue;
-                }
-                context->color_buffer[screen_index(context->width, frag.pos)] = frag.color;
-                context->depth_buffer[screen_index(context->width, frag.pos)] = frag.depth;
-                pthread_mutex_unlock(&context->mutex);
-            }
+            frag.barycentric_coord = pointInTriangle(weights);
+            if ( !( frag.barycentric_coord.x == 0 && frag.barycentric_coord.y == 0 && frag.barycentric_coord.z == 0 ) ) draw_fragment(context, &frag);
             weights.x += A23;
             weights.y += A31;
             weights.z += A12;
@@ -237,7 +240,7 @@ void* call_fragment_bucket(void* args) {
     return NULL;
 }
 
-void RL_Render(RL_Context* context) {
+void RL_Draw(RL_Context* context) {
     da_clear(&(context->fragment_buffer));
     size_t size = context->vertex_input_buffer.size;
 
@@ -256,7 +259,6 @@ void RL_Render(RL_Context* context) {
         pthread_create(&context->threads[i], NULL, call_fragment_bucket, &context->fragment_buckets[i]);
     }
     for (size_t i = 0; i < N_THREADS; i++) pthread_join(context->threads[i], NULL);
-
 
     SDL_UpdateTexture(context->screen_texture, NULL, context->color_buffer, context->width * sizeof(RL_Color));
     SDL_RenderCopy(context->renderer, context->screen_texture, NULL, NULL);

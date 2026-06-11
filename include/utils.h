@@ -34,7 +34,7 @@ int iSignedAreaTriangle(ivec2 a, ivec2 b, ivec2 c);
 
 vec3 barycentric_coordinates(ivec3 weights);
 
-bool pointInTriangle(vec3 weights);
+vec3 pointInTriangle(ivec3 weights);
 
 float toScreen(float coord, int size);
 vec3 project_vertex(RL_Context* context, vec3 vertex);

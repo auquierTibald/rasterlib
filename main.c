@@ -8,10 +8,10 @@
 #define N_TRIANGLES 2
 
 void blue_fs(struct RL_Context_t *context, RL_Fragment *frag) {
-    frag->color = (RL_Color){.uint32 = 0xFF0000FF};
+    frag->color = (RL_Color){.uint16 = 0xF000};
 }
 
-void def_fs(struct RL_Context_t *context, RL_Fragment *frag) {
+void shrek_fs(struct RL_Context_t *context, RL_Fragment *frag) {
     frag->color = texture_sample(context->texture, frag->tex_coord);
 }
 
@@ -71,31 +71,32 @@ int main(int argc, char* argv[]) {
 
         angle += 0.05f;
         SDL_RenderClear(renderer);
-        RL_Clear(context, (RL_Color){.uint32 = 0xFF000000});
+        RL_Clear(context, (RL_Color){.uint16 = 0xFFFF});
 
         //SHREK
          RL_MeshData(context, mesh);
-         RL_SetFragmentShader(context, def_fs);
+         RL_SetFragmentShader(context, shrek_fs);
          RL_SetTexture(context, tex);
          matrix model = mat_id(4);
          mat_scale(&model, vec3(30, 30, 30));
          mat_rotate_pitch(&model, angle);
+         //mat_rotate_roll(&model, -0.8f);
          //mat_rotate_pitch(&model, angle);
          mat_translate(&model, vec3(0, -200, 300));
          matrix view = mat_id(4);
          RL_SetModelMatrix(context, model);
          RL_SetViewMatrix(context, view);
-         RL_Render(context);
+         RL_Draw(context);
 
 
         //BACKGROUND
         RL_TriangleData(context, triangles, N_TRIANGLES);
         RL_SetFragmentShader(context, blue_fs);
         model = mat_id(4);
-        mat_scale(&model, vec3(10, 10, 10));
-        mat_translate(&model, vec3(0, 0, 300));
+        mat_scale(&model, vec3(100, 100, 100));
+        mat_translate(&model, vec3(0, 0, 3000));
         RL_SetModelMatrix(context, model);
-        RL_Render(context);
+        RL_Draw(context);
 
 
 
