@@ -5,6 +5,8 @@
 #include "rasterlib.h"
 #include "utils-matrix.h"
 
+#undef main
+
 #define N_TRIANGLES 2
 
 void blue_fs(struct RL_Context_t *context, RL_Fragment *frag) {
@@ -43,6 +45,9 @@ RL_Triangle triangles[N_TRIANGLES] = {
 
 int main(int argc, char* argv[]) {
     float angle = 0.0f;
+
+    SDL_Init(SDL_INIT_EVERYTHING);
+
     SDL_Window *window  = SDL_CreateWindow("rasterlib", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600,900, SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
     SDL_Event event;
@@ -73,7 +78,7 @@ int main(int argc, char* argv[]) {
         SDL_RenderClear(renderer);
         RL_Clear(context, (RL_Color){.uint16 = 0xFFFF});
 
-        //SHREK
+         //SHREK
          RL_MeshData(context, mesh);
          RL_SetFragmentShader(context, shrek_fs);
          RL_SetTexture(context, tex);
@@ -87,17 +92,6 @@ int main(int argc, char* argv[]) {
          RL_SetModelMatrix(context, model);
          RL_SetViewMatrix(context, view);
          RL_Draw(context);
-
-
-        //BACKGROUND
-        RL_TriangleData(context, triangles, N_TRIANGLES);
-        RL_SetFragmentShader(context, blue_fs);
-        model = mat_id(4);
-        mat_scale(&model, vec3(100, 100, 100));
-        mat_translate(&model, vec3(0, 0, 3000));
-        RL_SetModelMatrix(context, model);
-        RL_Draw(context);
-
 
 
         free(model.data);

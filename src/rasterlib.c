@@ -1,8 +1,6 @@
 #include "rasterlib.h"
 
 #include <stdlib.h>
-#include <string.h>
-#include <pthread.h>
 #include "utils-matrix.h"
 #include "utils.h"
 
@@ -19,9 +17,9 @@ void default_vs(struct RL_Context_t *context, RL_Triangle *triangle)
      //     .c = mat_apply(context->view_matrix, mat_apply(context->model_matrix, triangle->pos.c))
      // };
     RL_Triangle new = { .pos = mvp, .tex = triangle->tex, .normal = triangle->normal };
-    pthread_mutex_lock(&context->mutex);
+    SDL_LockMutex(context->mutex);
     da_append(&context->fragment_buffer, RL_Triangle, new);
-    pthread_mutex_unlock(&context->mutex);
+    SDL_UnlockMutex(context->mutex);
 }
 
 void default_fs(struct RL_Context_t *context, RL_Fragment *frag) {
@@ -32,12 +30,14 @@ void default_fs(struct RL_Context_t *context, RL_Fragment *frag) {
 
 RL_Context* RL_CreateContext(int width, int heigth, SDL_Renderer* renderer)
 {
-    RL_Context* context = (RL_Context*)malloc(sizeof(RL_Context));
-    bzero(context, sizeof(RL_Context));
+    RL_Context* context = malloc(sizeof(RL_Context));
+    memset(context, '\0', sizeof(RL_Context));
     context->width = width;
     context->height = heigth;
     context-> ratio = (float)heigth / (float)width;
     context->renderer = renderer;
+
+    context->mutex = SDL_CreateMutex();
 
     context->vertex_shader = default_vs;
     context->fragment_shader = default_fs;
@@ -145,12 +145,12 @@ void draw_fragment(RL_Context* context, RL_Fragment *frag) {
     vec3 depths = vec3(frag->tri->pos.a.z, frag->tri->pos.b.z, frag->tri->pos.c.z);
     frag->depth = 1 / dot3(vec3(1 / depths.x, 1 / depths.y, 1 / depths.z), frag->barycentric_coord);
 
-    pthread_mutex_lock(&context->mutex);
+    SDL_LockMutex(context->mutex);
     if(frag->depth >= context->depth_buffer[screen_index(context->width, frag->pos)]) {
-        pthread_mutex_unlock(&context->mutex);
+        SDL_UnlockMutex(context->mutex);
         return;
     }
-    pthread_mutex_unlock(&context->mutex);
+    SDL_UnlockMutex(context->mutex);
 
     //TEXTURE COORDINATES INTERPOLATION
     frag->tex_coord = product2(product2( frag->tri->tex.a, 1/depths.x ), frag->barycentric_coord.x);
@@ -160,14 +160,14 @@ void draw_fragment(RL_Context* context, RL_Fragment *frag) {
 
     context->fragment_shader(context, frag);
 
-    pthread_mutex_lock(&context->mutex);
+    SDL_LockMutex(context->mutex);
     if(frag->depth >= context->depth_buffer[screen_index(context->width, frag->pos)]) {
-        pthread_mutex_unlock(&context->mutex);
+        SDL_UnlockMutex(context->mutex);
         return;
     }
     context->color_buffer[screen_index(context->width, frag->pos)] = frag->color;
     context->depth_buffer[screen_index(context->width, frag->pos)] = frag->depth;
-    pthread_mutex_unlock(&context->mutex);
+    SDL_UnlockMutex(context->mutex);
 }
 
 void draw_triangle(RL_Context* context, RL_Triangle *tri) {
@@ -224,20 +224,20 @@ RL_Bucket create_bucket(RL_Context* context, size_t i, size_t size) {
     return bucket;
 }
 
-void* call_vertex_bucket(void* args) {
+int call_vertex_bucket(void* args) {
     RL_Bucket* bucket = args;
     RL_Context* context = bucket->context;
     da_range(&context->vertex_input_buffer, RL_Triangle, bucket->start, bucket->end)
         context->vertex_shader(context, element);
-    return NULL;
+    return 0;
 }
 
-void* call_fragment_bucket(void* args) {
+int call_fragment_bucket(void* args) {
     RL_Bucket* bucket = args;
     RL_Context* context = bucket->context;
     da_range(&context->fragment_buffer, RL_Triangle, bucket->start, bucket->end)
         draw_triangle(context, element);
-    return NULL;
+    return 0;
 }
 
 void RL_Draw(RL_Context* context) {
@@ -247,18 +247,24 @@ void RL_Draw(RL_Context* context) {
     //CALLING VERTEX SHADERS
     for (size_t i = 0; i < N_THREADS; i++) {
         context->vertex_buckets[i] = create_bucket(context, i, size);
-        pthread_create(&context->threads[i], NULL, call_vertex_bucket, &context->vertex_buckets[i]);
+        char name[32] = "vertex";
+        name[6] = i;
+        name[7] = '\0';
+        context->threads[i] = SDL_CreateThread(call_vertex_bucket, "vertex", &context->vertex_buckets[i]);
     }
-    for (size_t i = 0; i < N_THREADS; i++) pthread_join(context->threads[i], NULL);
+    for (size_t i = 0; i < N_THREADS; i++) SDL_WaitThread(context->threads[i], NULL);
 
     size = context->fragment_buffer.size;
 
     //CALLING FRAGMENT SHADERS
     for (size_t i = 0; i < N_THREADS; i++) {
         context->fragment_buckets[i] = create_bucket(context, i, size);
-        pthread_create(&context->threads[i], NULL, call_fragment_bucket, &context->fragment_buckets[i]);
+        char name[32] = "fragment";
+        name[8] = i;
+        name[9] = '\0';
+        context->threads[i] = SDL_CreateThread(call_fragment_bucket, name, &context->fragment_buckets[i]);
     }
-    for (size_t i = 0; i < N_THREADS; i++) pthread_join(context->threads[i], NULL);
+    for (size_t i = 0; i < N_THREADS; i++) SDL_WaitThread(context->threads[i], NULL);
 
     SDL_UpdateTexture(context->screen_texture, NULL, context->color_buffer, context->width * sizeof(RL_Color));
     SDL_RenderCopy(context->renderer, context->screen_texture, NULL, NULL);

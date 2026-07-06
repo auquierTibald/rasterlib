@@ -5,7 +5,7 @@
 #include "typedefs.h"
 #include "assets_loaders.h"
 
-#define N_THREADS 8
+#define N_THREADS 1
 
 typedef da(RL_Triangle) da_RL_Triangle;
 typedef da(RL_Fragment) da_RL_Fragment;
@@ -14,8 +14,8 @@ typedef struct RL_Context_t {
     int width, height;
     float ratio;
 
-    pthread_t threads[N_THREADS];
-    pthread_mutex_t mutex;
+    SDL_Thread* threads[N_THREADS];
+    SDL_mutex* mutex;
 
     RL_Color *color_buffer;
     float   *depth_buffer;

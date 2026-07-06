@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 4.1)
 project(rasterlib)
 
-add_compile_options(-Wall -Wextra -fpermissive -pthread)
+add_compile_options(-Wall -Wextra)
 
 set(SRC main.c include/rasterlib.h
         include/typedefs.h
@@ -17,7 +17,7 @@ set(SRC main.c include/rasterlib.h
 )
 
 add_executable(rasterlib ${SRC})
-
-target_link_libraries(rasterlib SDL2 m)
+target_link_directories(rasterlib PRIVATE ./lib/)
 target_include_directories(rasterlib PRIVATE ./include/ )
+target_link_libraries(rasterlib SDL2 m)
 
