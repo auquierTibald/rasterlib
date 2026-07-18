@@ -28,14 +28,13 @@ void default_fs(struct RL_Context_t *context, RL_Fragment *frag) {
 }
 
 
-RL_Context* RL_CreateContext(int width, int heigth, SDL_Renderer* renderer)
+RL_Context* RL_CreateContext(int width, int heigth)
 {
     RL_Context* context = malloc(sizeof(RL_Context));
     memset(context, '\0', sizeof(RL_Context));
     context->width = width;
     context->height = heigth;
     context-> ratio = (float)heigth / (float)width;
-    context->renderer = renderer;
 
     context->mutex = SDL_CreateMutex();
 
@@ -49,7 +48,6 @@ RL_Context* RL_CreateContext(int width, int heigth, SDL_Renderer* renderer)
     context->fragment_buffer = (da_RL_Triangle)da_alloc(RL_Triangle, 1);
     context->asset_manager = (RL_AssetManager)da_alloc(RL_Asset, 1);
 
-    context->screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, width, heigth);
     return context;
 }
 
@@ -73,8 +71,6 @@ void RL_SetDisplay(RL_Context* context, int width, int heigth)
 
     context->color_buffer = malloc(width * heigth * sizeof(RL_Color));
     context->depth_buffer = malloc(width * heigth * sizeof(double));
-    SDL_DestroyTexture(context->screen_texture);
-    context->screen_texture = SDL_CreateTexture(context->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, heigth);
 }
 
 void RL_SetTexture(RL_Context* context, RL_Texture *tex)
@@ -250,7 +246,7 @@ void RL_Draw(RL_Context* context) {
         char name[32] = "vertex";
         name[6] = i;
         name[7] = '\0';
-        context->threads[i] = SDL_CreateThread(call_vertex_bucket, "vertex", &context->vertex_buckets[i]);
+        context->threads[i] = SDL_CreateThread(call_vertex_bucket, name, &context->vertex_buckets[i]);
     }
     for (size_t i = 0; i < N_THREADS; i++) SDL_WaitThread(context->threads[i], NULL);
 
@@ -265,7 +261,4 @@ void RL_Draw(RL_Context* context) {
         context->threads[i] = SDL_CreateThread(call_fragment_bucket, name, &context->fragment_buckets[i]);
     }
     for (size_t i = 0; i < N_THREADS; i++) SDL_WaitThread(context->threads[i], NULL);
-
-    SDL_UpdateTexture(context->screen_texture, NULL, context->color_buffer, context->width * sizeof(RL_Color));
-    SDL_RenderCopy(context->renderer, context->screen_texture, NULL, NULL);
 }

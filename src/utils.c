@@ -114,8 +114,7 @@ vec3 barycentric_coordinates(ivec3 weights) {
 
 vec3 pointInTriangle(ivec3 weights)
 {
-    bool inside = (weights.x <= 0 && weights.y <= 0 && weights.z <= 0) || (weights.x >= 0 && weights.y >= 0 && weights.z >= 0);
-    if (!inside) return vec3(0, 0, 0);
+    if (!(weights.x <= 0 && weights.y <= 0 && weights.z <= 0) || (weights.x >= 0 && weights.y >= 0 && weights.z >= 0)) return vec3(0, 0, 0);
     float sum = weights.x + weights.y + weights.z;
     if (sum == 0 ) return vec3(0, 0, 0);
 

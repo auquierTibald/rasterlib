@@ -1,11 +1,12 @@
 #ifndef RASTERLIB_RASTERLIB_H
 #define RASTERLIB_RASTERLIB_H
 
-#include <SDL2/SDL.h>
+#include <SDL2/SDL_thread.h>
+
 #include "typedefs.h"
 #include "assets_loaders.h"
 
-#define N_THREADS 1
+#define N_THREADS 16
 
 typedef da(RL_Triangle) da_RL_Triangle;
 typedef da(RL_Fragment) da_RL_Fragment;
@@ -32,12 +33,9 @@ typedef struct RL_Context_t {
 
     RL_AssetManager asset_manager;
 
-    SDL_Renderer *renderer;
-    SDL_Texture *screen_texture;
-
 } RL_Context;
 
-RL_Context* RL_CreateContext(int width, int heigth, SDL_Renderer* renderer);
+RL_Context* RL_CreateContext(int width, int heigth);
 void RL_DestroyContext(RL_Context* context);
 
 void RL_SetDisplay(RL_Context* context, int width, int heigth);

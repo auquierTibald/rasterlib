@@ -1,8 +1,6 @@
 #ifndef RASTERLIB_UTILS_H
 #define RASTERLIB_UTILS_H
 
-#include <stdbool.h>
-
 #include "rasterlib.h"
 #include "typedefs.h"
 

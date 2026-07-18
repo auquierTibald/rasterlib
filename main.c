@@ -45,14 +45,12 @@ RL_Triangle triangles[N_TRIANGLES] = {
 
 int main(int argc, char* argv[]) {
     float angle = 0.0f;
-
-    SDL_Init(SDL_INIT_EVERYTHING);
-
     SDL_Window *window  = SDL_CreateWindow("rasterlib", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600,900, SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
+    SDL_Texture* screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 1600/2, 900/2);
     SDL_Event event;
 
-    RL_Context *context = RL_CreateContext(1600/2, 900/2, renderer);
+    RL_Context *context = RL_CreateContext(1600/2, 900/2);
     RL_Mesh *mesh = RL_LoadAsset(&context->asset_manager, "/home/tibald/CLionProjects/Im3dSoftRenderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
     RL_Texture *tex = RL_LoadAsset(&context->asset_manager, "/home/tibald/CLionProjects/Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
 
@@ -78,7 +76,7 @@ int main(int argc, char* argv[]) {
         SDL_RenderClear(renderer);
         RL_Clear(context, (RL_Color){.uint16 = 0xFFFF});
 
-         //SHREK
+        //SHREK
          RL_MeshData(context, mesh);
          RL_SetFragmentShader(context, shrek_fs);
          RL_SetTexture(context, tex);
@@ -94,8 +92,22 @@ int main(int argc, char* argv[]) {
          RL_Draw(context);
 
 
+        //BACKGROUND
+        RL_TriangleData(context, triangles, N_TRIANGLES);
+        RL_SetFragmentShader(context, blue_fs);
+        model = mat_id(4);
+        mat_scale(&model, vec3(100, 100, 100));
+        mat_translate(&model, vec3(0, 0, 3000));
+        RL_SetModelMatrix(context, model);
+        RL_Draw(context);
+
+
+
         free(model.data);
         free(view.data);
+
+        SDL_UpdateTexture(screen_texture, NULL, context->color_buffer, context->width * sizeof(RL_Color));
+        SDL_RenderCopy(renderer, screen_texture, NULL, NULL);
 
         SDL_RenderPresent(renderer);
     }
