@@ -2,9 +2,6 @@
 #define UTILS_MATRIX_H
 
 #include "typedefs.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
 
 matrix mat_init(int rows, int cols);
 matrix mat_id(int size);

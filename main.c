@@ -1,8 +1,10 @@
-#include <stdbool.h>
-#include <SDL2/SDL.h>
-#include <utils.h>
+#include "SDL2/SDL.h"
 
 #include "rasterlib.h"
+#include "stdbool.h"
+//#include "utils.h"
+#include <stdio.h>
+
 #include "utils-matrix.h"
 
 #undef main
@@ -10,7 +12,11 @@
 #define N_TRIANGLES 2
 
 void blue_fs(struct RL_Context_t *context, RL_Fragment *frag) {
-    frag->color = (RL_Color){.uint16 = 0xF000};
+    frag->color = (RL_Color){.uint16 = 0xF00F};
+}
+
+void white_fs(struct RL_Context_t *context, RL_Fragment *frag) {
+    frag->color = (RL_Color){.uint16 = 0xFFFF};
 }
 
 void shrek_fs(struct RL_Context_t *context, RL_Fragment *frag) {
@@ -51,8 +57,8 @@ int main(int argc, char* argv[]) {
     SDL_Event event;
 
     RL_Context *context = RL_CreateContext(1600/2, 900/2);
-    RL_Mesh *mesh = RL_LoadAsset(&context->asset_manager, "/home/tibald/CLionProjects/Im3dSoftRenderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
-    RL_Texture *tex = RL_LoadAsset(&context->asset_manager, "/home/tibald/CLionProjects/Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
+    RL_Mesh *mesh = RL_LoadAsset(&context->asset_manager, "C:/Users/tibal/CLionProjects/rasterlib/assets/suzanne.obj", RL_ASSET_TYPE_MESH);
+    //RL_Texture *tex = RL_LoadAsset(&context->asset_manager, "C:/Users/tibal/CLionProjects/Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
 
     int fps = 0;
     Uint32 last_time = SDL_GetTicks();
@@ -78,13 +84,13 @@ int main(int argc, char* argv[]) {
 
         //SHREK
          RL_MeshData(context, mesh);
-         RL_SetFragmentShader(context, shrek_fs);
-         RL_SetTexture(context, tex);
+         RL_SetFragmentShader(context, blue_fs);
+         //RL_SetTexture(context, tex);
          matrix model = mat_id(4);
          mat_scale(&model, vec3(30, 30, 30));
          mat_rotate_pitch(&model, angle);
-         //mat_rotate_roll(&model, -0.8f);
-         //mat_rotate_pitch(&model, angle);
+         mat_rotate_roll(&model, -0.8f);
+         mat_rotate_pitch(&model, angle);
          mat_translate(&model, vec3(0, -200, 300));
          matrix view = mat_id(4);
          RL_SetModelMatrix(context, model);
