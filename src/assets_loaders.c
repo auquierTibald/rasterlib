@@ -1,8 +1,10 @@
 #include "assets_loaders.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 
 #include <string.h>
+#include <stdlib.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 RL_Texture *load_texture(const char* filePath)
 {

@@ -1,5 +1,9 @@
 #include "utils-matrix.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
 matrix mat_init(int rows, int cols) 
 {
 	matrix res = {.data = NULL, .rows = rows, .cols = cols};
