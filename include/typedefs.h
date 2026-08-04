@@ -78,11 +78,8 @@ typedef struct {
     size_t start, end;
 } RL_Bucket;
 
-typedef void (*RL_VertexShader)(struct RL_Context_t* context, RL_Triangle *triangle);
-typedef void (*RL_FragmentShader)(struct RL_Context_t* context, RL_Fragment *fragment);
-
-#define RL_VERTEX_SHADER 0
-#define RL_FRAGMENT_SHADER 1
+typedef void (*RL_VertexShader)(struct RL_Context_t* context, RL_Triangle *triangle, void* user_data);
+typedef void (*RL_FragmentShader)(struct RL_Context_t* context, RL_Fragment *fragment, void* user_data);
 
 //TEXTURE TYPE
 

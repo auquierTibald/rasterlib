@@ -4,7 +4,7 @@
 #include "utils-matrix.h"
 #include "utils.h"
 
-void default_vs(struct RL_Context_t *context, RL_Triangle *triangle)
+void default_vs(struct RL_Context_t *context, RL_Triangle *triangle, void* user_data)
 {
       triangle3 mvp = {
           .a = project_vertex(context, mat_apply(context->view_matrix, mat_apply(context->model_matrix, triangle->pos.a))),
@@ -22,7 +22,7 @@ void default_vs(struct RL_Context_t *context, RL_Triangle *triangle)
     SDL_UnlockMutex(context->mutex);
 }
 
-void default_fs(struct RL_Context_t *context, RL_Fragment *frag) {
+void default_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
     //color = texture_sample(context->texture, tex_coord);
     frag->color = (RL_Color){.uint16 = frag->depth };
 }
@@ -154,7 +154,7 @@ void draw_fragment(RL_Context* context, RL_Fragment *frag) {
     frag->tex_coord = sum2(frag->tex_coord, product2(product2( frag->tri->tex.c, 1/depths.z ), frag->barycentric_coord.z));
     frag->tex_coord = product2(frag->tex_coord, frag->depth);
 
-    context->fragment_shader(context, frag);
+    context->fragment_shader(context, frag, context->user_data);
 
     SDL_LockMutex(context->mutex);
     if(frag->depth >= context->depth_buffer[screen_index(context->width, frag->pos)]) {
@@ -224,7 +224,7 @@ int call_vertex_bucket(void* args) {
     RL_Bucket* bucket = args;
     RL_Context* context = bucket->context;
     da_range(&context->vertex_input_buffer, RL_Triangle, bucket->start, bucket->end)
-        context->vertex_shader(context, element);
+        context->vertex_shader(context, element, context->user_data);
     return 0;
 }
 

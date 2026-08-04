@@ -11,15 +11,15 @@
 
 #define N_TRIANGLES 2
 
-void blue_fs(struct RL_Context_t *context, RL_Fragment *frag) {
+void blue_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
     frag->color = (RL_Color){.uint16 = 0xF00F};
 }
 
-void white_fs(struct RL_Context_t *context, RL_Fragment *frag) {
+void white_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
     frag->color = (RL_Color){.uint16 = 0xFFFF};
 }
 
-void shrek_fs(struct RL_Context_t *context, RL_Fragment *frag) {
+void shrek_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
     frag->color = texture_sample(context->texture, frag->tex_coord);
 }
 
@@ -57,8 +57,8 @@ int main(int argc, char* argv[]) {
     SDL_Event event;
 
     RL_Context *context = RL_CreateContext(1600/2, 900/2);
-    RL_Mesh *mesh = RL_LoadAsset(&context->asset_manager, "C:/Users/tibal/CLionProjects/rasterlib/assets/suzanne.obj", RL_ASSET_TYPE_MESH);
-    //RL_Texture *tex = RL_LoadAsset(&context->asset_manager, "C:/Users/tibal/CLionProjects/Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
+    RL_Mesh *mesh = RL_LoadAsset(&context->asset_manager, "../Im3dSoftRenderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
+    RL_Texture *tex = RL_LoadAsset(&context->asset_manager, "../Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
 
     int fps = 0;
     Uint32 last_time = SDL_GetTicks();
@@ -84,8 +84,8 @@ int main(int argc, char* argv[]) {
 
         //SHREK
          RL_MeshData(context, mesh);
-         RL_SetFragmentShader(context, blue_fs);
-         //RL_SetTexture(context, tex);
+         //RL_SetFragmentShader(context, shrek_fs);
+         RL_SetTexture(context, tex);
          matrix model = mat_id(4);
          mat_scale(&model, vec3(30, 30, 30));
          mat_rotate_pitch(&model, angle);
@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
 
         //BACKGROUND
         RL_TriangleData(context, triangles, N_TRIANGLES);
-        RL_SetFragmentShader(context, blue_fs);
+        //RL_SetFragmentShader(context, blue_fs);
         model = mat_id(4);
         mat_scale(&model, vec3(100, 100, 100));
         mat_translate(&model, vec3(0, 0, 3000));

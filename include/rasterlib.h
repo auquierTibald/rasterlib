@@ -33,6 +33,7 @@ typedef struct RL_Context_t {
 
     RL_AssetManager asset_manager;
 
+    void* user_data;
 } RL_Context;
 
 RL_Context* RL_CreateContext(int width, int heigth);

@@ -157,6 +157,28 @@ void mat_rotate_roll(matrix *target, float angle)
 	target->data = res.data;
 }
 
+matrix projection_matrix(float fovy, float aspect, float near, float far) {
+	float f = 1 / tan(fovy/2);
+
+	matrix projection_matrix = mat_init(4, 4);
+	projection_matrix.data[0] = f / aspect;
+	projection_matrix.data[5] = f;
+	projection_matrix.data[10] = (far + near)  / (near - far);
+	projection_matrix.data[11] = 2 * far * near  / (near - far);
+	projection_matrix.data[14] = -1;
+
+	return projection_matrix;
+}
+
+void mat_project(matrix *target, float fovy, float aspect, float near, float far) {
+	matrix proj = projection_matrix(fovy, aspect, near, far);
+
+	matrix res = mat_mul(proj, *target);
+	free(proj.data);
+	free(target->data);
+	target->data = res.data;
+}
+
 
 void mat_print(matrix mat)
 {

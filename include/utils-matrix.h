@@ -17,6 +17,9 @@ void mat_rotate_yaw(matrix *target, float angle);
 void mat_rotate_pitch(matrix *target, float angle);
 void mat_rotate_roll(matrix *target, float angle);
 
+matrix projection_matrix(float fovy, float aspect, float near, float far);
+void mat_project(matrix *target, float fovy, float aspect, float near, float far);
+
 void mat_print(matrix mat);
 
 #endif

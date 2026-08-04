@@ -1,5 +1,5 @@
 CC=gcc
-C_FLAGS=-Wall -Wextra
+C_FLAGS= -O3 -Wall -Wextra
 
 RASTERLIB_INC := -I./include/
 RASTERLIB_LIB := -L./lib/
