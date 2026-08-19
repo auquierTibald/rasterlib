@@ -1,7 +1,7 @@
 #ifndef RASTERLIB_RASTERLIB_H
 #define RASTERLIB_RASTERLIB_H
 
-#include <SDL2/SDL_thread.h>
+#include "threads.h"
 
 #include "typedefs.h"
 #include "assets_loaders.h"
@@ -15,8 +15,8 @@ typedef struct RL_Context_t {
     int width, height;
     float ratio;
 
-    SDL_Thread* threads[N_THREADS];
-    SDL_mutex* mutex;
+    RL_Thread threads[N_THREADS];
+    RL_Mutex mutex;
 
     RL_Color *color_buffer;
     float   *depth_buffer;

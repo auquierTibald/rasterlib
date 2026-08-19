@@ -10,7 +10,7 @@ RASTERLIB_OBJ := $(patsubst %.c, %.o, ${RASTERLIB_SRC})
 
 MAIN_SRC = main.c
 
-LIBS = -lSDL2 -lm
+LIBS = -lm
 MAIN_LIBS = -L. -lSDL2 -lrasterlib -lm
 
 all : rasterlib-main
@@ -22,7 +22,7 @@ librasterlib.a: ${RASTERLIB_OBJ}
 	ar rcs librasterlib.a ${RASTERLIB_OBJ}
 
 rasterlib-main: ${MAIN_SRC} librasterlib.a
-	${CC} ${C_FLAGS} ${RASTERLIB_LIB} ${RASTERLIB_INC} -o main ${MAIN_SRC} ${MAIN_LIBS}
+	${CC} ${C_FLAGS} ${RASTERLIB_INC} -o main ${MAIN_SRC} ${MAIN_LIBS}
 
 clean:
 	rm ${RASTERLIB_OBJ}

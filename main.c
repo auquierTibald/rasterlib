@@ -57,8 +57,8 @@ int main(int argc, char* argv[]) {
     SDL_Event event;
 
     RL_Context *context = RL_CreateContext(1600/2, 900/2);
-    RL_Mesh *mesh = RL_LoadAsset(&context->asset_manager, "../Im3dSoftRenderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
-    RL_Texture *tex = RL_LoadAsset(&context->asset_manager, "../Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
+    RL_Mesh *mesh = RL_LoadAsset(&context->asset_manager, "assets/suzanne.obj", RL_ASSET_TYPE_MESH);
+    //RL_Texture *tex = RL_LoadAsset(&context->asset_manager, "../Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
 
     int fps = 0;
     Uint32 last_time = SDL_GetTicks();
@@ -83,9 +83,10 @@ int main(int argc, char* argv[]) {
         RL_Clear(context, (RL_Color){.uint16 = 0xFFFF});
 
         //SHREK
+
          RL_MeshData(context, mesh);
          //RL_SetFragmentShader(context, shrek_fs);
-         RL_SetTexture(context, tex);
+         //RL_SetTexture(context, tex);
          matrix model = mat_id(4);
          mat_scale(&model, vec3(30, 30, 30));
          mat_rotate_pitch(&model, angle);

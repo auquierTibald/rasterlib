@@ -16,7 +16,6 @@ if( (da_ptr)->size >= (da_ptr)->capacity ) { \
 (da_ptr)->capacity *= 2; \
 void* new_block = realloc( (da_ptr)->data, (da_ptr)->capacity * sizeof(type) ); \
 if(new_block) (da_ptr)->data = new_block;\
-else printf("c la merde gros\n"); \
 } \
 (da_ptr)->data[(da_ptr)->size] = (element); \
 (da_ptr)->size++; \
