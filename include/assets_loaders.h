@@ -17,8 +17,8 @@ typedef struct {
 
 typedef da(RL_Asset) RL_AssetManager;
 
-void *RL_LoadAsset(RL_AssetManager *am, const char* filePath, RL_AssetType type);
-
+void  *RL_LoadAsset(RL_AssetManager *am, const char* filePath, RL_AssetType type);
+void RL_UnloadAsset(RL_AssetManager *am, const char* filePath, RL_AssetType type);
 
 RL_Texture *load_texture(const char* filePath);
 void free_texture(RL_Texture tex);

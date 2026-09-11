@@ -1,3 +1,6 @@
 assets/
 include/SDL2/
 lib/
+.idea/
+*.o
+vgcore.*

@@ -142,3 +142,18 @@ void *RL_LoadAsset(RL_AssetManager *am, const char* filePath, RL_AssetType type)
     da_append(am, RL_Asset, asset);
     return data;
 }
+
+void RL_UnloadAsset(RL_AssetManager *am, const char* filePath, RL_AssetType type) {
+    da_foreach(am, RL_Asset) {
+        if (!strcmp(filePath, element->source) && type == element->type) {
+            switch(type) {
+                case RL_ASSET_TYPE_MESH:
+                    free_mesh(element->data);
+                    break;
+                case RL_ASSET_TYPE_TEXTURE:
+                    free_texture(*(RL_Texture *)element->data);
+                    break;
+            }
+        }
+    }
+}

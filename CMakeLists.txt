@@ -7,6 +7,7 @@ set(SRC main.c include/rasterlib.h
         include/typedefs.h
         include/assets_loaders.h
         include/stb_image.h
+        include/threads.h
         include/utils-matrix.h
         src/assets_loaders.c
         src/utils-matrix.c
@@ -15,6 +16,8 @@ set(SRC main.c include/rasterlib.h
         src/utils.c
         include/utils-da.h
         include/threads.h
+        include/utils-triangles.h
+        src/utils-triangles.c
 )
 
 add_executable(rasterlib ${SRC})

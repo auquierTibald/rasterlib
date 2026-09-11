@@ -23,7 +23,7 @@
 #if defined(__linux__)
     #include <pthread.h>
 
-    typedef int (*RL_ThreadFunction)(void*);
+    typedef void* (*RL_ThreadFunction)(void*);
     typedef pthread_t RL_Thread;
     typedef pthread_mutex_t RL_Mutex;
     typedef int RL_Thread_RetValue;

@@ -33,6 +33,20 @@ matrix mat_id(int size)
 	return res;
 }
 
+
+void mat_id_no_alloc(matrix *mat, int size)
+{
+	mat->rows = size; mat->cols = size;
+	for(int i = 0; i < size; i++)
+	{
+		for(int j = 0; j < size; j++)
+		{
+			if(i == j) mat->data[i * size + j] = 1;
+			else	   mat->data[i * size + j] = 0;
+		}
+	}
+}
+
 matrix mat_mul(matrix mat1, matrix mat2)
 {
 	if(mat1.cols != mat2.rows) return (matrix){.data = NULL, .rows = 0, .cols = 0};
@@ -61,6 +75,10 @@ vec3 mat_apply(matrix mat, vec3 vertex)
 	res = (vec3){vec.data[0], vec.data[1], vec.data[2]};
 	free(vec.data);
 	return res;
+}
+
+triangle3 mat_apply_triangle3(matrix mat, triangle3 tri) {
+	return (triangle3){mat_apply(mat, tri.a), mat_apply(mat, tri.b), mat_apply(mat, tri.c)};
 }
 
 void mat_scale(matrix *target, vec3 vector)
@@ -158,12 +176,12 @@ void mat_rotate_roll(matrix *target, float angle)
 }
 
 matrix projection_matrix(float fovy, float aspect, float near, float far) {
-	float f = 1 / tan(fovy/2);
+	const float f = 1.0f / tanf(fovy/2);
 
-	matrix projection_matrix = mat_init(4, 4);
+	const matrix projection_matrix = mat_init(4, 4);
 	projection_matrix.data[0] = f / aspect;
 	projection_matrix.data[5] = f;
-	projection_matrix.data[10] = (far + near)  / (near - far);
+	projection_matrix.data[10] = - near - far / (near - far);
 	projection_matrix.data[11] = 2 * far * near  / (near - far);
 	projection_matrix.data[14] = -1;
 

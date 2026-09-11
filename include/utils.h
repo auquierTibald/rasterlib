@@ -26,16 +26,4 @@ vec3 diff3(vec3 target, vec3 value);
 vec2 perp(vec2 v);
 ivec2 iperp(ivec2 v);
 
-float signedAreaTriangle(vec2 a, vec2 b, vec2 c);
-
-int iSignedAreaTriangle(ivec2 a, ivec2 b, ivec2 c);
-
-vec3 barycentric_coordinates(ivec3 weights);
-
-vec3 pointInTriangle(ivec3 weights);
-
-float toScreen(float coord, int size);
-vec3 project_vertex(RL_Context* context, vec3 vertex);
-int screen_index(int stride, ivec2 pos);
-
 #endif //RASTERLIB_UTILS_H

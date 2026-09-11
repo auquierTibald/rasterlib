@@ -1,5 +1,5 @@
 CC=gcc
-C_FLAGS= -O3 -Wall -Wextra
+C_FLAGS= -O5 -Wall -Wextra -g -fsanitize=address
 
 RASTERLIB_INC := -I./include/
 RASTERLIB_LIB := -L./lib/
@@ -10,7 +10,7 @@ RASTERLIB_OBJ := $(patsubst %.c, %.o, ${RASTERLIB_SRC})
 
 MAIN_SRC = main.c
 
-LIBS = -lm
+LIBS = -lm -pthread
 MAIN_LIBS = -L. -lSDL2 -lrasterlib -lm
 
 all : rasterlib-main

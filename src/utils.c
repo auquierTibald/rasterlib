@@ -101,35 +101,3 @@ vec3 diff3(vec3 target, vec3 value)
 
 vec2 perp(vec2 v) { return vec2(v.y, -v.x); }
 ivec2 iperp(ivec2 v) { return ivec2(v.y, -v.x); }
-
-int iSignedAreaTriangle(ivec2 a, ivec2 b, ivec2 c)
-{
-    return (a.y - b.y) * c.x + (b.x - a.x) * c.y + (a.x * b.y - a.y * b.x);
-}
-
-vec3 barycentric_coordinates(ivec3 weights) {
-    float sum = weights.x + weights.y + weights.z;
-    return vec3((float)weights.x / sum, (float)weights.y / sum, (float)weights.z / sum);
-}
-
-vec3 pointInTriangle(ivec3 weights)
-{
-    if (!(weights.x <= 0 && weights.y <= 0 && weights.z <= 0) || (weights.x >= 0 && weights.y >= 0 && weights.z >= 0)) return vec3(0, 0, 0);
-    float sum = weights.x + weights.y + weights.z;
-    if (sum == 0 ) return vec3(0, 0, 0);
-
-   return vec3((float)weights.x / sum, (float)weights.y / sum, (float)weights.z / sum);
-}
-
-float toScreen(float coord, int size)
-{
-    return (float)size/2 + coord * (float)size/2;
-}
-
-vec3 project_vertex(RL_Context* context, vec3 vertex) {
-    return (vec3){toScreen(vertex.x / vertex.z * context->ratio, context->width), toScreen(-vertex.y /  vertex.z, context->height), vertex.z};
-}
-
-int screen_index(int stride, ivec2 pos) {
-    return pos.y * stride + pos.x;
-}
