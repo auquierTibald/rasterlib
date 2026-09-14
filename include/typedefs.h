@@ -5,8 +5,6 @@
 #include <stddef.h>
 #include <utils-da.h>
 
-#define FAR_PLANE 100000
-
 //BASIC GEOMETRY TYPES
 typedef struct {
     int x, y;

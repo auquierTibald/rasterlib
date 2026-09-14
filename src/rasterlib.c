@@ -31,11 +31,12 @@ typedef struct RL_Context_t {
     RL_AssetManager asset_manager;
 
     void* user_data;
+
+    RL_ProjectionMode_Kind projection_mode;
 } RL_Context;
 
 void draw_fragment(RL_Context* context, RL_Fragment *frag) {
     vec3 depths = vec3(frag->tri->pos.a.z, frag->tri->pos.b.z, frag->tri->pos.c.z);
-    //if (depths.x > FAR_PLANE || depths.y > FAR_PLANE || depths.z > FAR_PLANE) return;
     frag->depth = 1 / dot3(vec3(1 / depths.x, 1 / depths.y, 1 / depths.z), frag->barycentric_coord);
 
 
@@ -80,9 +81,9 @@ void draw_triangle(RL_Context* context, RL_Triangle *tri) {
             RL_Fragment frag = {.tri = tri, .pos = ivec2(x, y), .barycentric_coord = barycentric_coordinates(weights)};
             frag.barycentric_coord = pointInTriangle(weights);
             if ( !( frag.barycentric_coord.x == 0 && frag.barycentric_coord.y == 0 && frag.barycentric_coord.z == 0 ) ) {
-                RL_LockMutex(&context->mutex);
+                //RL_LockMutex(&context->mutex);
                 da_append(&context->fragment_buffers[frag.pos.y / context->height / N_THREADS], RL_Fragment, frag);
-                RL_UnlockMutex(&context->mutex);
+                //RL_UnlockMutex(&context->mutex);
             }
             weights.x += A23;
             weights.y += A31;
@@ -102,17 +103,8 @@ void default_vs(struct RL_Context_t *context, RL_Triangle *triangle, void* user_
     RL_Default_ShaderData data = *(RL_Default_ShaderData*)user_data;
     const matrix mv = mat_mul(data.view, data.model);
 
-    RL_Triangle new = *triangle;
-    new.pos = mat_apply_triangle3(mv, triangle->pos);
+    triangle->pos = mat_apply_triangle3(mv, triangle->pos);
 
-    near_clip_result result = near_clip_triangle(context, &new);
-    if ( result.triangles ) {
-        for (size_t i = 0; i < result.triangle_count; i++) {
-            //PROJECT TRIANGLE
-            result.triangles[i].pos = project_triangle(context, result.triangles[i].pos);
-            draw_triangle(context, &result.triangles[i]);
-        }
-    }
     free(mv.data);
 }
 
@@ -143,6 +135,8 @@ RL_Context* RL_CreateContext(int width, int heigth)
 
     context->asset_manager = (RL_AssetManager)da_alloc(RL_Asset, 1);
 
+    context->projection_mode = RL_PROJECTION_MODE_NONE;
+
     return context;
 }
 
@@ -152,6 +146,11 @@ void RL_DestroyContext(RL_Context* context)
     if (context->depth_buffer) free(context->depth_buffer);
     if (context->input_buffer.data) da_free(&(context->input_buffer));
     free(context);
+}
+
+void RL_ProjectionMode(RL_Context* context, RL_ProjectionMode_Kind mode)
+{
+    context->projection_mode = mode;
 }
 
 void RL_SetDisplay(RL_Context* context, int width, int heigth)
@@ -289,7 +288,26 @@ void RL_SetShaderData(RL_Context* context, void* data) {
 void RL_Draw(RL_Context* context) {
     for (size_t i = 0; i < N_THREADS+1; i++) da_clear(&context->fragment_buffers[i]);
 
-    create_and_call_buckets(context, context->input_buffer.size,   (RL_ThreadFunction) call_vertex_bucket);
+    da_foreach(&context->input_buffer, RL_Triangle) {
+        context->vertex_shader(context, element, context->user_data);
+        switch (context->projection_mode) {
+            default: break;
+            case RL_PROJECTION_MODE_NONE: draw_triangle(context, element); break;
+            case RL_PROJECTION_MODE_PERSPECTIVE: {
+                const near_clip_result result = near_clip_triangle(context, element);
+                if ( result.triangles ) {
+                    for (size_t i = 0; i < result.triangle_count; i++) {
+                        //PROJECT TRIANGLE
+                        result.triangles[i].pos = project_triangle(context, result.triangles[i].pos);
+                        draw_triangle(context, &result.triangles[i]);
+                    }
+                }
+                break;
+            }
+            case RL_PROJECTION_MODE_ORTHOGRAPHIC: printf("TODO: Orthographic Projection isn't implemented.\n"); exit(1);
+        }
+    }
+    //create_and_call_buckets(context, context->input_buffer.size,   (RL_ThreadFunction) call_vertex_bucket);
 
     for (size_t i = 0; i < N_THREADS+1; i++) {
         context->buckets[i] = (RL_Bucket){

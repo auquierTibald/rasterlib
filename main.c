@@ -112,10 +112,10 @@ int main(int argc, char* argv[]) {
     float d = 0.0f;
     SDL_Window *window  = SDL_CreateWindow("rasterlib", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600,900, SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
-    SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 1600/4, 900/4);
+    SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 1600/6, 900/6);
     SDL_Event event;
 
-    RL_Context *context = RL_CreateContext(1600/4, 900/4);
+    RL_Context *context = RL_CreateContext(1600/6, 900/6);
     RL_AssetManager *am = RL_GetAssetManager(context);
 
     RL_Mesh *skybox_mesh = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/sphere.obj", RL_ASSET_TYPE_MESH);
@@ -132,6 +132,7 @@ int main(int argc, char* argv[]) {
 
     shader_data = (RL_Default_ShaderData){.view = view};
     RL_SetShaderData(context, &shader_data);
+    RL_ProjectionMode(context, RL_PROJECTION_MODE_PERSPECTIVE);
 
     SDL_SetRelativeMouseMode(SDL_TRUE);
 
@@ -164,7 +165,7 @@ int main(int argc, char* argv[]) {
             mat_id_no_alloc(&model, 4);
             mat_rotate_pitch(&model, d);
             shader_data.model = model;
-            RL_Draw(context);
+            //RL_Draw(context);
 
             //BACKGROUND
             RL_TriangleData(context, triangles, N_TRIANGLES);
@@ -182,7 +183,7 @@ int main(int argc, char* argv[]) {
             RL_SetFragmentShader(context, tex_fs);
             RL_SetTexture(context, skybox_tex);
             mat_id_no_alloc(&model, 4);
-            mat_scale(&model, vec3(100, 100, 100));
+            mat_scale(&model, vec3(10000, 10000, 10000));
             shader_data.model = model;
             RL_Draw(context);
 

@@ -7,10 +7,17 @@
 #include "assets_loaders.h"
 
 #define N_THREADS 64
+#define FAR_PLANE 1000000
 
 typedef struct {
     matrix model, view;
 } RL_Default_ShaderData;
+
+typedef enum {
+    RL_PROJECTION_MODE_NONE,
+    RL_PROJECTION_MODE_PERSPECTIVE,
+    RL_PROJECTION_MODE_ORTHOGRAPHIC,
+} RL_ProjectionMode_Kind;
 
 typedef da(RL_Triangle) da_RL_Triangle;
 typedef da(RL_Fragment) da_RL_Fragment;
@@ -19,6 +26,8 @@ typedef struct RL_Context_t RL_Context;
 
 RL_Context* RL_CreateContext(int width, int heigth);
 void RL_DestroyContext(RL_Context* context);
+
+void RL_ProjectionMode(RL_Context* context, RL_ProjectionMode_Kind mode);
 
 void RL_SetDisplay(RL_Context *context, int width, int heigth);
 void RL_GetDisplay(RL_Context *context, int *width, int *heigth);
