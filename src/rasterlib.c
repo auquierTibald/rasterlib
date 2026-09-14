@@ -12,15 +12,16 @@ typedef struct RL_Context_t {
     int width, height;
     float ratio;
 
-    RL_Thread threads[N_THREADS];
+    RL_Thread threads[N_THREADS+1];
     RL_Mutex mutex;
 
     RL_Color *color_buffer;
     float   *depth_buffer;
 
-    RL_Bucket buckets[N_THREADS];
+    RL_Bucket buckets[N_THREADS+1];
 
     da_RL_Triangle input_buffer;
+    da_RL_Fragment fragment_buffers[N_THREADS+1];
 
     RL_VertexShader vertex_shader;
     RL_FragmentShader fragment_shader;
@@ -34,15 +35,11 @@ typedef struct RL_Context_t {
 
 void draw_fragment(RL_Context* context, RL_Fragment *frag) {
     vec3 depths = vec3(frag->tri->pos.a.z, frag->tri->pos.b.z, frag->tri->pos.c.z);
-    if (depths.x > FAR_PLANE || depths.y > FAR_PLANE || depths.z > FAR_PLANE) return;
+    //if (depths.x > FAR_PLANE || depths.y > FAR_PLANE || depths.z > FAR_PLANE) return;
     frag->depth = 1 / dot3(vec3(1 / depths.x, 1 / depths.y, 1 / depths.z), frag->barycentric_coord);
 
-    RL_LockMutex(&context->mutex);
-    if(frag->depth >= context->depth_buffer[screen_index(context->width, frag->pos)]) {
-        RL_UnlockMutex(&context->mutex);
-        return;
-    }
-    RL_UnlockMutex(&context->mutex);
+
+    if(frag->depth >= context->depth_buffer[screen_index(context->width, frag->pos)]) return;
 
     //TEXTURE COORDINATES INTERPOLATION
     frag->tex_coord = product2(product2( frag->tri->tex.a, 1/depths.x ), frag->barycentric_coord.x);
@@ -52,14 +49,8 @@ void draw_fragment(RL_Context* context, RL_Fragment *frag) {
 
     context->fragment_shader(context, frag, context->user_data);
 
-    RL_LockMutex(&context->mutex);
-    if(frag->depth >= context->depth_buffer[screen_index(context->width, frag->pos)]) {
-        RL_UnlockMutex(&context->mutex);
-        return;
-    }
     context->color_buffer[screen_index(context->width, frag->pos)] = frag->color;
     context->depth_buffer[screen_index(context->width, frag->pos)] = frag->depth;
-    RL_UnlockMutex(&context->mutex);
 }
 
 void draw_triangle(RL_Context* context, RL_Triangle *tri) {
@@ -72,8 +63,6 @@ void draw_triangle(RL_Context* context, RL_Triangle *tri) {
     int miny = min3(v1.y, v2.y, v3.y); clamp(&miny, 0, context->height);
     int maxx = max3(v1.x, v2.x, v3.x); clamp(&maxx, 0, context->width);
     int maxy = max3(v1.y, v2.y, v3.y); clamp(&maxy, 0, context->height);
-
-    vec3 depths = vec3(tri->pos.a.z, tri->pos.b.z, tri->pos.c.z);
 
     int A12 = v1.y - v2.y, B12 = v2.x - v1.x;
     int A23 = v2.y - v3.y, B23 = v3.x - v2.x;
@@ -90,7 +79,11 @@ void draw_triangle(RL_Context* context, RL_Triangle *tri) {
         for(int x = minx ; x < maxx; x++) {
             RL_Fragment frag = {.tri = tri, .pos = ivec2(x, y), .barycentric_coord = barycentric_coordinates(weights)};
             frag.barycentric_coord = pointInTriangle(weights);
-            if ( !( frag.barycentric_coord.x == 0 && frag.barycentric_coord.y == 0 && frag.barycentric_coord.z == 0 ) ) draw_fragment(context, &frag);
+            if ( !( frag.barycentric_coord.x == 0 && frag.barycentric_coord.y == 0 && frag.barycentric_coord.z == 0 ) ) {
+                RL_LockMutex(&context->mutex);
+                da_append(&context->fragment_buffers[frag.pos.y / context->height / N_THREADS], RL_Fragment, frag);
+                RL_UnlockMutex(&context->mutex);
+            }
             weights.x += A23;
             weights.y += A31;
             weights.z += A12;
@@ -125,7 +118,7 @@ void default_vs(struct RL_Context_t *context, RL_Triangle *triangle, void* user_
 
 void default_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
     //color = texture_sample(context->texture, tex_coord);
-    frag->color = (RL_Color){.uint16 = 0x0000 };
+    frag->color = (RL_Color){ .uint16 = 0x0000 };
 }
 
 
@@ -146,6 +139,8 @@ RL_Context* RL_CreateContext(int width, int heigth)
     context->depth_buffer = (float*)malloc(width * heigth * sizeof(float));
 
     context->input_buffer = (da_RL_Triangle)da_alloc(RL_Triangle, 1);
+    for (size_t i = 0; i < N_THREADS+1; i++) context->fragment_buffers[i] = (da_RL_Fragment)da_alloc(RL_Fragment, 1);
+
     context->asset_manager = (RL_AssetManager)da_alloc(RL_Asset, 1);
 
     return context;
@@ -267,23 +262,15 @@ int call_vertex_bucket(void* args) {
         context->vertex_shader(context, element, context->user_data);
     return 0;
 }
-/*
-int call_draw_bucket(void *args) {
-    RL_Bucket* bucket = args;
-    RL_Context* context = bucket->context;
-    da_range(&context->vertex_out_buffer, RL_Triangle, bucket->start, bucket->end)
-        draw_triangle(context, element);
-    return 0;
-}
 
 int call_fragment_bucket(void* args) {
     RL_Bucket* bucket = args;
     RL_Context* context = bucket->context;
-    da_range(&context->fragment_buffer, RL_Fragment, bucket->start, bucket->end)
+    da_foreach(&context->fragment_buffers[bucket->start], RL_Fragment)
         draw_fragment(context, element);
     return 0;
 }
-*/
+
 void create_and_call_buckets(RL_Context* context, size_t size, RL_ThreadFunction func) {
     for (size_t i = 0; i < N_THREADS; i++) {
         context->buckets[i] = create_bucket(context, i, size);
@@ -300,7 +287,20 @@ void RL_SetShaderData(RL_Context* context, void* data) {
 }
 
 void RL_Draw(RL_Context* context) {
+    for (size_t i = 0; i < N_THREADS+1; i++) da_clear(&context->fragment_buffers[i]);
+
     create_and_call_buckets(context, context->input_buffer.size,   (RL_ThreadFunction) call_vertex_bucket);
-    //create_and_call_buckets(context, context->vertex_out_buffer.size,   (RL_ThreadFunction) call_draw_bucket);
-    //create_and_call_buckets(context, context->fragment_buffer.size, (RL_ThreadFunction) call_fragment_bucket);
+
+    for (size_t i = 0; i < N_THREADS+1; i++) {
+        context->buckets[i] = (RL_Bucket){
+            .context = context,
+            .start = i,
+            .end = 0
+        };
+        context->threads[i] = RL_CreateThread((RL_ThreadFunction) call_fragment_bucket, &context->buckets[i]);
+    }
+    for (size_t i = 0; i < N_THREADS+1; i++) {
+        RL_JoinThread(context->threads[i]);
+        RL_DestroyThread(context->threads[i]);
+    }
 }

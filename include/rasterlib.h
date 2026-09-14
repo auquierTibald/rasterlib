@@ -6,7 +6,7 @@
 #include "typedefs.h"
 #include "assets_loaders.h"
 
-#define N_THREADS 4
+#define N_THREADS 64
 
 typedef struct {
     matrix model, view;
