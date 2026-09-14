@@ -22,6 +22,11 @@ triangle3 project_triangle(RL_Context* context, triangle3 tri);
 
 int screen_index(int stride, ivec2 pos);
 
-bool near_clip_triangle(RL_Context* context,RL_Triangle *triangle);
+typedef struct {
+    RL_Triangle *triangles;
+    size_t triangle_count;
+} near_clip_result;
+
+near_clip_result near_clip_triangle(RL_Context* context,RL_Triangle *triangle);
 
 #endif //RASTERLIB_UTILS_TRIANGLES_H

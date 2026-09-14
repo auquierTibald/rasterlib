@@ -3,6 +3,8 @@
 //
 #include "utils-triangles.h"
 
+#include <stdlib.h>
+
 
 #include "typedefs.h"
 #include "utils.h"
@@ -60,7 +62,7 @@ static vec3 near_clip_line(vec3 v1, vec3 v2) {
     return vec3(v1.x + t * (v2.x-v1.x), v1.y + t * (v2.y-v1.y), v1.z + t * (v2.z-v1.z));
 }
 
-bool near_clip_triangle(RL_Context* context, RL_Triangle* tri) {
+near_clip_result near_clip_triangle(RL_Context* context, RL_Triangle* tri) {
     vec3 v1 = tri->pos.a, v2 = tri->pos.b, v3 = tri->pos.c;
     vec3 inside_points[3]; int n_inside_points = 0;
     vec3 outside_points[3]; int n_outside_points = 0;
@@ -78,26 +80,32 @@ bool near_clip_triangle(RL_Context* context, RL_Triangle* tri) {
     else           outside_points[n_outside_points++] = v3;
 
     switch (n_inside_points) {
-        case 0:
-            return false;
-            break;
+        default: return (near_clip_result){NULL, 0};
 
         case 1: // 1 vertex inside, 2 outside : clipped TRIANGLE
             vec3 o1 = near_clip_line(outside_points[0], inside_points[0]), o2 = near_clip_line(outside_points[1], inside_points[0]);
             if (flip_point) tri->pos = (triangle3){inside_points[0], o2, o1};
             else            tri->pos = (triangle3){inside_points[0], o1, o2};
-            return true;
-            break;
+
+            near_clip_result res = {
+                .triangles = malloc(sizeof(RL_Triangle)),
+                .triangle_count = 1
+            };
+            res.triangles[0] = *tri;
+            return res;
 
         case 2: // 2 vertex inside, 1 outside : clipped QUAD
             o1 = near_clip_line(outside_points[0], inside_points[0]), o2 = near_clip_line(outside_points[0], inside_points[1]);
             
-            return false;
-            break;
+            return (near_clip_result){NULL, 0};
 
-        case 3:
-            return true;
-            break;
+        case 3: // 3 vertices inside, no clipping
+            res = (near_clip_result){
+                .triangles = malloc(sizeof(RL_Triangle)),
+                .triangle_count = 1
+            };
+            res.triangles[0] = *tri;
+            return res;
     }
-    return false;
+    return (near_clip_result){NULL, 0};
 }

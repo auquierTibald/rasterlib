@@ -110,19 +110,19 @@ RL_Triangle triangles[N_TRIANGLES] = {
 
 int main(int argc, char* argv[]) {
     float d = 0.0f;
-    SDL_Window *window  = SDL_CreateWindow("rasterlib", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600,900, SDL_WINDOW_RESIZABLE);
+    SDL_Window *window  = SDL_CreateWindow("rasterlib", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600/2,900/2, SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
-    SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 1600/2, 900/2);
+    SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 1600/8, 900/8);
     SDL_Event event;
 
-    RL_Context *context = RL_CreateContext(1600/2, 900/2);
+    RL_Context *context = RL_CreateContext(1600/8, 900/8);
     RL_AssetManager *am = RL_GetAssetManager(context);
 
-    RL_Mesh *skybox_mesh = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/skybox.obj", RL_ASSET_TYPE_MESH);
-    RL_Texture *skybox_tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/skybox2.png", RL_ASSET_TYPE_TEXTURE);
+    RL_Mesh *skybox_mesh = RL_LoadAsset(am, "../../repos/3D-Software-Renderer/assets/sphere.obj", RL_ASSET_TYPE_MESH);
+    RL_Texture *skybox_tex = RL_LoadAsset(am, "../../repos/3D-Software-Renderer/assets/textures/skybox2.png", RL_ASSET_TYPE_TEXTURE);
 
-    RL_Mesh *mesh = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
-    RL_Texture *tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
+    RL_Mesh *mesh = RL_LoadAsset(am, "../../repos/3D-Software-Renderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
+    RL_Texture *tex = RL_LoadAsset(am, "../../repos/3D-Software-Renderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
 
     int fps = 0;
     Uint32 last_time = SDL_GetTicks();
@@ -184,7 +184,7 @@ int main(int argc, char* argv[]) {
             mat_id_no_alloc(&model, 4);
             mat_scale(&model, vec3(100, 100, 100));
             shader_data.model = model;
-            RL_Draw(context);
+            //RL_Draw(context);
 
 
         //UPDATING SCREEN TEXTURE FROM CONTEXT'S COLOR BUFFER
@@ -197,11 +197,11 @@ int main(int argc, char* argv[]) {
     free(model.data);
     free(view.data);
 
-    RL_UnloadAsset(am, "../Im3dSoftRenderer/assets/skybox.obj", RL_ASSET_TYPE_MESH);
-    RL_UnloadAsset(am, "../Im3dSoftRenderer/assets/textures/skybox2.png", RL_ASSET_TYPE_TEXTURE);
+    RL_UnloadAsset(am, "../../repos/3D-Software-Renderer/assets/sphere.obj", RL_ASSET_TYPE_MESH);
+    RL_UnloadAsset(am, "../../repos/3D-Software-Renderer/assets/textures/skybox2.png", RL_ASSET_TYPE_TEXTURE);
 
-    RL_UnloadAsset(am, "../Im3dSoftRenderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
-    RL_UnloadAsset(am, "../Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
+    RL_UnloadAsset(am, "../../repos/3D-Software-Renderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
+    RL_UnloadAsset(am, "../../repos/3D-Software-Renderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
 
     RL_DestroyContext(context);
 
