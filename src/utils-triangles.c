@@ -80,9 +80,10 @@ near_clip_result near_clip_triangle(RL_Context* context, RL_Triangle* tri) {
     else           outside_points[n_outside_points++] = v3;
 
     switch (n_inside_points) {
-        default: return (near_clip_result){NULL, 0};
+        default:
+            return (near_clip_result){NULL, 0};
 
-        case 1: // 1 vertex inside, 2 outside : clipped TRIANGLE
+        case 1: { // 1 vertex inside, 2 outside : clipped TRIANGLE
             vec3 o1 = near_clip_line(outside_points[0], inside_points[0]), o2 = near_clip_line(outside_points[1], inside_points[0]);
             if (flip_point) tri->pos = (triangle3){inside_points[0], o2, o1};
             else            tri->pos = (triangle3){inside_points[0], o1, o2};
@@ -93,19 +94,21 @@ near_clip_result near_clip_triangle(RL_Context* context, RL_Triangle* tri) {
             };
             res.triangles[0] = *tri;
             return res;
+        }
 
-        case 2: // 2 vertex inside, 1 outside : clipped QUAD
-            o1 = near_clip_line(outside_points[0], inside_points[0]), o2 = near_clip_line(outside_points[0], inside_points[1]);
+        case 2: { // 2 vertex inside, 1 outside : clipped QUAD
+            vec3 o1 = near_clip_line(outside_points[0], inside_points[0]), o2 = near_clip_line(outside_points[0], inside_points[1]);
             
             return (near_clip_result){NULL, 0};
-
-        case 3: // 3 vertices inside, no clipping
-            res = (near_clip_result){
+        }
+        case 3: { // 3 vertices inside, no clipping
+            near_clip_result res = {
                 .triangles = malloc(sizeof(RL_Triangle)),
                 .triangle_count = 1
             };
             res.triangles[0] = *tri;
             return res;
+        }
     }
     return (near_clip_result){NULL, 0};
 }
