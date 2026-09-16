@@ -4,6 +4,8 @@
 #include <stdlib.h>
 
 #define STB_IMAGE_IMPLEMENTATION
+#include <stdbool.h>
+
 #include "stb_image.h"
 
 RL_Texture *load_texture(const char* filePath)
@@ -49,8 +51,54 @@ RL_Mesh *init_mesh()
     return mesh;
 }
 
+static da_RL_Material parse_mtl(char * filePath) {
+    da_RL_Material materials = da_alloc(RL_Material, 1);
+    FILE* fp = fopen(filePath, "r");
+    if(fp != NULL)
+    {
+        char line[2048];
+
+        while (fgets(line, 2048, fp)) {
+            if (!strncmp(line, "newmtl ", 7)) {
+                RL_Material mat = { .name = malloc(512) };
+                sscanf(line, "newmtl %s", mat.name);
+                while (fgets(line, 2048, fp)) {
+                    if (!strncmp(line, "\n", 1)) break;
+                    if (!strncmp(line, "Ns ", 3)) {
+                        sscanf(line, "Ns %f", &mat.Ns);
+                    } else if (!strncmp(line, "Ni ", 3)) {
+                        sscanf(line, "Ni %f", &mat.Ni);
+                    } else if (!strncmp(line, "d ", 2)) {
+                        sscanf(line, "d %f", &mat.d);
+                    }
+
+                    else if (!strncmp(line, "Ka ", 3)) {
+                        sscanf(line, "Ka %f %f %f", &mat.Ka.x,  &mat.Ka.y,  &mat.Ka.z);
+                    } else if (!strncmp(line, "Kd ", 3)) {
+                        sscanf(line, "Kd %f %f %f", &mat.Kd.x,  &mat.Kd.y,  &mat.Kd.z);
+                    } else if (!strncmp(line, "Ks ", 3)) {
+                        sscanf(line, "Ks %f %f %f", &mat.Ks.x,  &mat.Ks.y,  &mat.Ks.z);
+                    } else if (!strncmp(line, "Ke ", 3)) {
+                        sscanf(line, "Ke %f %f %f", &mat.Ke.x,  &mat.Ke.y,  &mat.Ke.z);
+                    }
+
+                    else if (!strncmp(line, "map_Kd ", 7)) {
+                        char tex_path[512];
+                        sscanf(line, "map_Kd %s", tex_path);
+                        mat.texture = load_texture(tex_path);
+                    }
+                }
+                da_append(&materials, RL_Material, mat);
+            }
+        }
+    }
+    fclose(fp);
+    return materials;
+}
+
 RL_Mesh *load_mesh(const char* filePath)
 {
+    bool material = false;
     RL_Mesh *mesh = init_mesh();
     FILE* fp = fopen(filePath, "r");
     if(fp != NULL)
@@ -97,6 +145,19 @@ RL_Mesh *load_mesh(const char* filePath)
                 da_append(&mesh->i_coords, vec3, face1);
                 da_append(&mesh->i_tex_coords, vec3, face2);
                 da_append(&mesh->i_normals, vec3, face3);
+            }
+            else if(!strncmp(line, "mtllib ", 7)) {
+                material = true;
+                char mat_path[512];
+                sscanf(line, "mtllib %s", mat_path);
+                mesh->materials = parse_mtl(mat_path);
+            }
+            else if (!strncmp(line, "usemtl ", 7) && material) {
+                char mat_name[512];
+                sscanf(line, "usemtl %s", mat_name);
+                da_foreach(&mesh->materials, RL_Material) {
+
+                }
             }
         }
         fclose(fp);

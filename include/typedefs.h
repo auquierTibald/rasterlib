@@ -92,6 +92,21 @@ typedef da(vec2) da_vec2;
 typedef da(ivec3) da_ivec3;
 
 typedef struct {
+    char* name;
+    vec3 Ka, Kd, Ks, Ke;
+    float Ns, Ni, d;
+    RL_Texture *texture;
+} RL_Material;
+
+typedef struct {
+    RL_Material *material;
+    size_t idx;
+} material_idx;
+
+typedef da(RL_Material) da_RL_Material;
+typedef da(material_idx) da_mat_idx;
+
+typedef struct {
     da_vec3 v_coords;
     da_vec2 v_tex_coords;
     da_vec3 v_normals;
@@ -100,11 +115,13 @@ typedef struct {
     da_ivec3 i_tex_coords;
     da_ivec3 i_normals;
 
+    da_RL_Material materials;
+    da_idx i_materials;
+
 } RL_Mesh;
 
 typedef struct {
     RL_Mesh *mesh;
-    RL_Texture *tex;
     RL_VertexShader vertex_shader, fragment_shader;
     matrix model_matrix;
 } RL_Model;

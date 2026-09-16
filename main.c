@@ -124,6 +124,9 @@ int main(int argc, char* argv[]) {
     RL_Mesh *mesh = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
     RL_Texture *tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
 
+    RL_Mesh *doom_map = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/DOOM.obj", RL_ASSET_TYPE_MESH);
+    RL_Texture *doom_tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/doom_diffuse.png", RL_ASSET_TYPE_TEXTURE);
+
     int fps = 0;
     Uint32 last_time = SDL_GetTicks();
 
@@ -156,6 +159,14 @@ int main(int argc, char* argv[]) {
         SDL_RenderClear(renderer);
         RL_Clear(context, (RL_Color){.uint16 = 0x0000});
 
+            RL_MeshData(context, doom_map);
+            RL_SetFragmentShader(context, tex_fs);
+            RL_SetTexture(context, doom_tex);
+            mat_id_no_alloc(&model, 4);
+            mat_scale(&model, vec3(5, 5, 5));
+            shader_data.model = model;
+            RL_Draw(context);
+            /*
             //SHREK
             RL_MeshData(context, mesh);
 
@@ -186,6 +197,7 @@ int main(int argc, char* argv[]) {
             mat_scale(&model, vec3(10000, 10000, 10000));
             shader_data.model = model;
             RL_Draw(context);
+            */
 
 
         //UPDATING SCREEN TEXTURE FROM CONTEXT'S COLOR BUFFER
