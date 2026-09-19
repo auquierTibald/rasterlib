@@ -12,4 +12,4 @@ Then, you can provide multiple information like vertex data, textures, and verte
 This will perform modifications to the intern frame buffer that can then be retrieved to be used.
 
 ### Extensions ###
-Raasterlib also provides some 3D utilities like an asset loader for images and .obj 3d models, and a system for 3D Rendering that manages projection, and near plane clipping ( you can choose it by calling ```RL_ProjectionMode``` ).
+Rasterlib also provides some 3D utilities like an asset loader for images and .obj 3d models, and a system for 3D Rendering that manages projection, and near plane clipping ( you can choose it by calling ```RL_ProjectionMode``` ).
