@@ -111,17 +111,14 @@ static da_RL_Material parse_mtl(char * fileName, const char *wdir) {
                     }
 
                     else if (!strncmp(line, "map_Kd ", 7)) {
-                        char tex_path[512];
-                        sscanf(line, "map_Kd %s", tex_path);
-                        if (!strchr(tex_path, '/')) {
-                            const size_t wdir_size = strlen(wdir), filename_size = strlen(tex_path);
-                            char *fullPath = malloc (wdir_size + filename_size + 1);
-                            strncpy(fullPath, wdir, wdir_size);
-                            strncat(fullPath, tex_path, filename_size);
-                            fullPath[wdir_size + filename_size] = '\0';
+                        char tex_name[512];
+                        sscanf(line, "map_Kd %s", tex_name);
+                        if (!strchr(tex_name, '/')) {
+                            char *fullPath = cat_directory(tex_name, wdir);
                             mat.texture = load_texture(fullPath);
                             free(fullPath);
-                        } else mat.texture = load_texture(tex_path);
+                        } else mat.texture = load_texture(tex_name);
+                        if (!mat.texture) printf("caca\n");
                     }
                 }
                 da_append(&materials, RL_Material, mat);
@@ -198,9 +195,7 @@ RL_Mesh *load_mesh(const char* filePath)
                 char *dir = get_directory(filePath);
                 if (dir) {
                     printf("get_directory: %s\n", dir);
-                    char *fullPath = cat_directory(dir, mat_fileName);
-                    mesh->materials = parse_mtl(fullPath, dir);
-                    free(fullPath);
+                    mesh->materials = parse_mtl(mat_fileName, dir);
                     free(dir);
                 } else mesh->materials = parse_mtl(mat_fileName, NULL);
             }
