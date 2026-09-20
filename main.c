@@ -158,7 +158,7 @@ int main(int argc, char* argv[]) {
         //RENDERING
         SDL_RenderClear(renderer);
         RL_Clear(context, (RL_Color){.uint16 = 0x0000});
-
+        /*
             RL_MeshData(context, doom_map);
             RL_SetFragmentShader(context, tex_fs);
             RL_SetTexture(context, doom_tex);
@@ -166,7 +166,7 @@ int main(int argc, char* argv[]) {
             mat_scale(&model, vec3(5, 5, 5));
             shader_data.model = model;
             RL_Draw(context);
-            /*
+        */
             //SHREK
             RL_MeshData(context, mesh);
 
@@ -197,7 +197,6 @@ int main(int argc, char* argv[]) {
             mat_scale(&model, vec3(10000, 10000, 10000));
             shader_data.model = model;
             RL_Draw(context);
-            */
 
 
         //UPDATING SCREEN TEXTURE FROM CONTEXT'S COLOR BUFFER

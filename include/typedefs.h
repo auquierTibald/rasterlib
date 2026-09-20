@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <utils-da.h>
+#include <sys/types.h>
 
 //BASIC GEOMETRY TYPES
 typedef struct {
@@ -52,10 +53,13 @@ typedef union {
 
 struct RL_Context_t;
 
+struct RL_Material_t;
+
 typedef struct {
     triangle3 pos;
     triangle2 tex;
     triangle3 normal;
+    struct RL_Material_t *mtl;
 } RL_Triangle;
 
 typedef struct {
@@ -91,20 +95,14 @@ typedef da(vec3) da_vec3;
 typedef da(vec2) da_vec2;
 typedef da(ivec3) da_ivec3;
 
-typedef struct {
+typedef struct RL_Material_t {
     char* name;
     vec3 Ka, Kd, Ks, Ke;
     float Ns, Ni, d;
     RL_Texture *texture;
 } RL_Material;
-
-typedef struct {
-    RL_Material *material;
-    size_t idx;
-} material_idx;
-
 typedef da(RL_Material) da_RL_Material;
-typedef da(material_idx) da_mat_idx;
+typedef da(ssize_t) da_ssize_t;
 
 typedef struct {
     da_vec3 v_coords;
@@ -116,7 +114,7 @@ typedef struct {
     da_ivec3 i_normals;
 
     da_RL_Material materials;
-    da_idx i_materials;
+    da_ssize_t i_materials;
 
 } RL_Mesh;
 

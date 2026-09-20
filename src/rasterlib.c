@@ -240,7 +240,8 @@ void RL_MeshData(RL_Context* context, RL_Mesh* mesh)
         RL_Triangle tri = (RL_Triangle){
             .pos = (triangle3){v1, v2, v3},
             .tex = (triangle2){vt1 ,vt2, vt3},
-            .normal = (triangle3){vn1 ,vn2, vn3}
+            .normal = (triangle3){vn1 ,vn2, vn3},
+            .mtl = mesh->i_materials.data[i] == -1 ? NULL : &mesh->materials.data[mesh->i_materials.data[i]]
         };
 
         da_append(&context->input_buffer, RL_Triangle, tri);

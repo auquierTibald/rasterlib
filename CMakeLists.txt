@@ -18,6 +18,7 @@ set(SRC main.c include/rasterlib.h
         include/threads.h
         include/utils-triangles.h
         src/utils-triangles.c
+        src/stb_image_impl.c
 )
 
 add_executable(rasterlib ${SRC})

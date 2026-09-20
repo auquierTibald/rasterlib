@@ -2,11 +2,32 @@
 
 #include <string.h>
 #include <stdlib.h>
-
-#define STB_IMAGE_IMPLEMENTATION
 #include <stdbool.h>
 
 #include "stb_image.h"
+
+char *get_directory(const char *filePath) {
+    const char *fileName = strrchr(filePath, '/');
+    if (fileName) {
+        fileName++;
+        const size_t size = strlen(filePath) - strlen(fileName);
+        char *res = malloc(size+1);
+        strncpy(res, filePath, size);
+        res[size] = '\0';
+        return res;
+    }
+    return NULL;
+}
+
+char *cat_directory(const char *dir, const char *fileName) {
+    const size_t dir_size = strlen(dir), filename_size = strlen(fileName);
+    char *fullPath = malloc (dir_size + filename_size + 1);
+    strncpy(fullPath, dir, dir_size);
+    fullPath[dir_size] = '\0';
+    strncat(fullPath, fileName, filename_size);
+    fullPath[dir_size + filename_size] = '\0';
+    return fullPath;
+}
 
 RL_Texture *load_texture(const char* filePath)
 {
@@ -43,17 +64,24 @@ RL_Mesh *init_mesh()
     mesh->v_coords = (da_vec3)da_alloc(vec3, 2);
     mesh->v_tex_coords = (da_vec2)da_alloc(vec2, 2);
     mesh->v_normals = (da_vec3)da_alloc(vec3, 2);
+    mesh->materials = (da_RL_Material)da_alloc(RL_Material, 1);
 
     mesh->i_coords = (da_ivec3)da_alloc(ivec3, 2);
     mesh->i_tex_coords = (da_ivec3)da_alloc(ivec3, 2);
     mesh->i_normals = (da_ivec3)da_alloc(ivec3, 2);
+    mesh->i_materials = (da_ssize_t)da_alloc(ssize_t, 1);
 
     return mesh;
 }
 
-static da_RL_Material parse_mtl(char * filePath) {
+static da_RL_Material parse_mtl(char * fileName, const char *wdir) {
     da_RL_Material materials = da_alloc(RL_Material, 1);
-    FILE* fp = fopen(filePath, "r");
+    FILE* fp = NULL;
+    if (wdir) {
+        char *fullPath = cat_directory(wdir, fileName);
+        fp = fopen(fullPath, "r");
+        free(fullPath);
+    } else fp = fopen(fileName, "r");
     if(fp != NULL)
     {
         char line[2048];
@@ -85,24 +113,39 @@ static da_RL_Material parse_mtl(char * filePath) {
                     else if (!strncmp(line, "map_Kd ", 7)) {
                         char tex_path[512];
                         sscanf(line, "map_Kd %s", tex_path);
-                        mat.texture = load_texture(tex_path);
+                        if (!strchr(tex_path, '/')) {
+                            const size_t wdir_size = strlen(wdir), filename_size = strlen(tex_path);
+                            char *fullPath = malloc (wdir_size + filename_size + 1);
+                            strncpy(fullPath, wdir, wdir_size);
+                            strncat(fullPath, tex_path, filename_size);
+                            fullPath[wdir_size + filename_size] = '\0';
+                            mat.texture = load_texture(fullPath);
+                            free(fullPath);
+                        } else mat.texture = load_texture(tex_path);
                     }
                 }
                 da_append(&materials, RL_Material, mat);
             }
         }
+        fclose(fp);
     }
-    fclose(fp);
+    else
+    {
+
+        printf( "unable to read from file : %s\n", fileName);
+    }
     return materials;
 }
 
 RL_Mesh *load_mesh(const char* filePath)
 {
-    bool material = false;
+    printf("loading mesh at : %s\n", filePath);
     RL_Mesh *mesh = init_mesh();
     FILE* fp = fopen(filePath, "r");
     if(fp != NULL)
     {
+        ssize_t current_mtl_idx = -1;
+        bool material = false;
         char line[2048];
 
         while (fgets(line, 2048, fp)) {
@@ -145,18 +188,32 @@ RL_Mesh *load_mesh(const char* filePath)
                 da_append(&mesh->i_coords, vec3, face1);
                 da_append(&mesh->i_tex_coords, vec3, face2);
                 da_append(&mesh->i_normals, vec3, face3);
+                if(material) da_append(&mesh->i_materials, ssize_t, -1);
+                else da_append(&mesh->i_materials ,ssize_t, current_mtl_idx);
             }
             else if(!strncmp(line, "mtllib ", 7)) {
                 material = true;
-                char mat_path[512];
-                sscanf(line, "mtllib %s", mat_path);
-                mesh->materials = parse_mtl(mat_path);
+                char mat_fileName[512];
+                sscanf(line, "mtllib %s", mat_fileName);
+                char *dir = get_directory(filePath);
+                if (dir) {
+                    printf("get_directory: %s\n", dir);
+                    char *fullPath = cat_directory(dir, mat_fileName);
+                    mesh->materials = parse_mtl(fullPath, dir);
+                    free(fullPath);
+                    free(dir);
+                } else mesh->materials = parse_mtl(mat_fileName, NULL);
             }
             else if (!strncmp(line, "usemtl ", 7) && material) {
                 char mat_name[512];
                 sscanf(line, "usemtl %s", mat_name);
+                ssize_t i = 0;
                 da_foreach(&mesh->materials, RL_Material) {
-
+                    if (!strcmp(mat_name, element->name)) {
+                        current_mtl_idx = i;
+                        break;
+                    }
+                    i++;
                 }
             }
         }
