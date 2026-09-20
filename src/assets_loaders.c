@@ -6,7 +6,7 @@
 
 #include "stb_image.h"
 
-char *get_directory(const char *filePath) {
+static char *get_directory(const char *filePath) {
     const char *fileName = strrchr(filePath, '/');
     if (fileName) {
         fileName++;
@@ -19,7 +19,7 @@ char *get_directory(const char *filePath) {
     return NULL;
 }
 
-char *cat_directory(const char *dir, const char *fileName) {
+static char *cat_directory(const char *dir, const char *fileName) {
     const size_t dir_size = strlen(dir), filename_size = strlen(fileName);
     char *fullPath = malloc (dir_size + filename_size + 1);
     strncpy(fullPath, dir, dir_size);
@@ -85,13 +85,15 @@ static da_RL_Material parse_mtl(char * fileName, const char *wdir) {
     if(fp != NULL)
     {
         char line[2048];
-
         while (fgets(line, 2048, fp)) {
             if (!strncmp(line, "newmtl ", 7)) {
                 RL_Material mat = { .name = malloc(512) };
                 sscanf(line, "newmtl %s", mat.name);
                 while (fgets(line, 2048, fp)) {
-                    if (!strncmp(line, "\n", 1)) break;
+                    if (!strncmp(line, "newmtl ", 7)) {
+                        fseek(fp, strlen(line)*-1, SEEK_CUR);
+                        break;
+                    }
                     if (!strncmp(line, "Ns ", 3)) {
                         sscanf(line, "Ns %f", &mat.Ns);
                     } else if (!strncmp(line, "Ni ", 3)) {
@@ -114,11 +116,16 @@ static da_RL_Material parse_mtl(char * fileName, const char *wdir) {
                         char tex_name[512];
                         sscanf(line, "map_Kd %s", tex_name);
                         if (!strchr(tex_name, '/')) {
-                            char *fullPath = cat_directory(tex_name, wdir);
+                            char *fullPath = cat_directory(wdir, tex_name);
+                            printf("loading texture %s\n", fullPath);
                             mat.texture = load_texture(fullPath);
                             free(fullPath);
-                        } else mat.texture = load_texture(tex_name);
+                        } else {
+                            printf("loading texture %s\n", tex_name);
+                            mat.texture = load_texture(tex_name);
+                        }
                         if (!mat.texture) printf("caca\n");
+                        printf("texture ptr : %p\n", mat.texture);
                     }
                 }
                 da_append(&materials, RL_Material, mat);
@@ -185,8 +192,8 @@ RL_Mesh *load_mesh(const char* filePath)
                 da_append(&mesh->i_coords, vec3, face1);
                 da_append(&mesh->i_tex_coords, vec3, face2);
                 da_append(&mesh->i_normals, vec3, face3);
-                if(material) da_append(&mesh->i_materials, ssize_t, -1);
-                else da_append(&mesh->i_materials ,ssize_t, current_mtl_idx);
+                if(material) da_append(&mesh->i_materials, ssize_t, current_mtl_idx);
+                else da_append(&mesh->i_materials ,ssize_t, -1);
             }
             else if(!strncmp(line, "mtllib ", 7)) {
                 material = true;
