@@ -8,20 +8,22 @@
 #include "utils-triangles.h"
 #include "utils-matrix.h"
 
+typedef da(near_clip_result) da_near_clip_result;
+
 typedef struct RL_Context_t {
     int width, height;
     float ratio;
 
-    RL_Thread threads[N_THREADS+1];
+    RL_Thread threads[N_THREADS];
     RL_Mutex mutex;
 
     RL_Color *color_buffer;
     float   *depth_buffer;
 
-    RL_Bucket buckets[N_THREADS+1];
+    RL_Bucket buckets[N_THREADS];
 
     da_RL_Triangle input_buffer;
-    da_RL_Fragment fragment_buffers[N_THREADS+1];
+    da_RL_Fragment fragment_buffers[N_THREADS];
 
     RL_VertexShader vertex_shader;
     RL_FragmentShader fragment_shader;
@@ -33,6 +35,8 @@ typedef struct RL_Context_t {
     void* user_data;
 
     RL_ProjectionMode_Kind projection_mode;
+
+    da_near_clip_result near_clip_results;
 } RL_Context;
 
 void draw_fragment(RL_Context* context, RL_Fragment *frag) {
@@ -80,9 +84,9 @@ void draw_triangle(RL_Context* context, RL_Triangle *tri) {
         for(int x = minx ; x < maxx; x++) {
             RL_Fragment frag = {.tri = tri, .pos = ivec2(x, y), .barycentric_coord = barycentric_coordinates(weights)};
             frag.barycentric_coord = pointInTriangle(weights);
-            if ( !( frag.barycentric_coord.x == 0 && frag.barycentric_coord.y == 0 && frag.barycentric_coord.z == 0 ) ) {
+            if ( !(frag.barycentric_coord.x == 0 && frag.barycentric_coord.y == 0 && frag.barycentric_coord.z == 0) ){
                 //RL_LockMutex(&context->mutex);
-                da_append(&context->fragment_buffers[frag.pos.y / context->height / N_THREADS], RL_Fragment, frag);
+                da_append(&context->fragment_buffers[frag.pos.y / context->height / (N_THREADS-1)], RL_Fragment, frag);
                 //RL_UnlockMutex(&context->mutex);
             }
             weights.x += A23;
@@ -131,9 +135,10 @@ RL_Context* RL_CreateContext(int width, int heigth)
     context->depth_buffer = (float*)malloc(width * heigth * sizeof(float));
 
     context->input_buffer = (da_RL_Triangle)da_alloc(RL_Triangle, 1);
-    for (size_t i = 0; i < N_THREADS+1; i++) context->fragment_buffers[i] = (da_RL_Fragment)da_alloc(RL_Fragment, 1);
+    for (size_t i = 0; i < N_THREADS; i++) context->fragment_buffers[i] = (da_RL_Fragment)da_alloc(RL_Fragment, 1);
 
     context->asset_manager = (RL_AssetManager)da_alloc(RL_Asset, 1);
+    context->near_clip_results = (da_near_clip_result)da_alloc(near_clip_result, 1);
 
     context->projection_mode = RL_PROJECTION_MODE_NONE;
 
@@ -235,7 +240,8 @@ void RL_MeshData(RL_Context* context, RL_Mesh* mesh)
         RL_Triangle tri = (RL_Triangle){
             .pos = (triangle3){v1, v2, v3},
             .tex = (triangle2){vt1 ,vt2, vt3},
-            .normal = (triangle3){vn1 ,vn2, vn3}
+            .normal = (triangle3){vn1 ,vn2, vn3},
+            .mtl = mesh->i_materials.data[i] == -1 ? NULL : &mesh->materials.data[mesh->i_materials.data[i]]
         };
 
         da_append(&context->input_buffer, RL_Triangle, tri);
@@ -265,8 +271,9 @@ int call_vertex_bucket(void* args) {
 int call_fragment_bucket(void* args) {
     RL_Bucket* bucket = args;
     RL_Context* context = bucket->context;
-    da_foreach(&context->fragment_buffers[bucket->start], RL_Fragment)
+    da_foreach(&context->fragment_buffers[bucket->start], RL_Fragment) {
         draw_fragment(context, element);
+    }
     return 0;
 }
 
@@ -286,7 +293,8 @@ void RL_SetShaderData(RL_Context* context, void* data) {
 }
 
 void RL_Draw(RL_Context* context) {
-    for (size_t i = 0; i < N_THREADS+1; i++) da_clear(&context->fragment_buffers[i]);
+    for (size_t i = 0; i < N_THREADS; i++) da_clear(&context->fragment_buffers[i]);
+    da_clear(&context->near_clip_results);
 
     da_foreach(&context->input_buffer, RL_Triangle) {
         context->vertex_shader(context, element, context->user_data);
@@ -301,6 +309,7 @@ void RL_Draw(RL_Context* context) {
                         result.triangles[i].pos = project_triangle(context, result.triangles[i].pos);
                         draw_triangle(context, &result.triangles[i]);
                     }
+                    da_append(&context->near_clip_results, near_clip_result, result);
                 }
                 break;
             }
@@ -309,7 +318,7 @@ void RL_Draw(RL_Context* context) {
     }
     //create_and_call_buckets(context, context->input_buffer.size,   (RL_ThreadFunction) call_vertex_bucket);
 
-    for (size_t i = 0; i < N_THREADS+1; i++) {
+    for (size_t i = 0; i < N_THREADS; i++) {
         context->buckets[i] = (RL_Bucket){
             .context = context,
             .start = i,
@@ -317,8 +326,9 @@ void RL_Draw(RL_Context* context) {
         };
         context->threads[i] = RL_CreateThread((RL_ThreadFunction) call_fragment_bucket, &context->buckets[i]);
     }
-    for (size_t i = 0; i < N_THREADS+1; i++) {
+    for (size_t i = 0; i < N_THREADS; i++) {
         RL_JoinThread(context->threads[i]);
         RL_DestroyThread(context->threads[i]);
     }
+    da_foreach(&context->near_clip_results, near_clip_result) free(element->triangles);
 }

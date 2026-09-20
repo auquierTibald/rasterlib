@@ -58,7 +58,7 @@ int screen_index(int stride, ivec2 pos) {
 
 static vec3 near_clip_line(vec3 v1, vec3 v2) {
     vec3 n = vec3(0, 0, 1);
-    float t = 0.01f - dot3(n, v1) / dot3(n, vec3(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z));
+    const float t = 0.01f - dot3(n, v1) / dot3(n, vec3(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z));
     return vec3(v1.x + t * (v2.x-v1.x), v1.y + t * (v2.y-v1.y), v1.z + t * (v2.z-v1.z));
 }
 
