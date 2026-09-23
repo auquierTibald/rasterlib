@@ -26,4 +26,4 @@ rasterlib-main: ${MAIN_SRC} librasterlib.a
 	${CC} ${C_FLAGS} ${DEBUG_FLAGS} ${RASTERLIB_INC} -o main ${MAIN_SRC} ${MAIN_LIBS}
 
 clean:
-	rm ${RASTERLIB_OBJ}
+	rm ${RASTERLIB_OBJ}; rm vgcore.*

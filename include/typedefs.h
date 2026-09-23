@@ -6,6 +6,8 @@
 #include <utils-da.h>
 #include <sys/types.h>
 
+#define Z_NEAR_PLANE 0.1f
+
 //BASIC GEOMETRY TYPES
 typedef struct {
     int x, y;

@@ -121,10 +121,10 @@ int main(int argc, char* argv[]) {
     float d = 0.0f;
     SDL_Window *window  = SDL_CreateWindow("rasterlib", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600,900, SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
-    SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 1600/6, 900/6);
+    SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 1600/8, 900/8);
     SDL_Event event;
 
-    RL_Context *context = RL_CreateContext(1600/6, 900/6);
+    RL_Context *context = RL_CreateContext(1600/8, 900/8);
     RL_AssetManager *am = RL_GetAssetManager(context);
 
     RL_Mesh *skybox_mesh = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/sphere.obj", RL_ASSET_TYPE_MESH);
@@ -132,6 +132,8 @@ int main(int argc, char* argv[]) {
 
     RL_Mesh *mesh = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
     RL_Texture *tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
+
+    RL_Texture *placeholder_tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/placeholder.png", RL_ASSET_TYPE_TEXTURE);
 
     RL_Mesh *doom_map = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/DOOM/DOOM.obj", RL_ASSET_TYPE_MESH);
     RL_Texture *doom_tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/doom_diffuse.png", RL_ASSET_TYPE_TEXTURE);
@@ -167,7 +169,7 @@ int main(int argc, char* argv[]) {
         //RENDERING
         SDL_RenderClear(renderer);
         RL_Clear(context, (RL_Color){.uint16 = 0x0000});
-
+            /*
             RL_MeshData(context, doom_map);
             RL_SetFragmentShader(context, mat_tex_fs);
             RL_SetTexture(context, doom_tex);
@@ -175,7 +177,7 @@ int main(int argc, char* argv[]) {
             mat_scale(&model, vec3(1000, 1000, 1000));
             shader_data.model = model;
             RL_Draw(context);
-        /*
+            */
             //SHREK
             RL_MeshData(context, mesh);
 
@@ -185,11 +187,12 @@ int main(int argc, char* argv[]) {
             mat_id_no_alloc(&model, 4);
             mat_rotate_pitch(&model, d);
             shader_data.model = model;
-            //RL_Draw(context);
+            RL_Draw(context);
 
             //BACKGROUND
             RL_TriangleData(context, triangles, N_TRIANGLES);
-            RL_SetTexture(context, tex);
+            RL_SetFragmentShader(context, tex_fs);
+            RL_SetTexture(context, placeholder_tex);
 
             mat_id_no_alloc(&model, 4);
             mat_scale(&model, vec3(0.1f, 0.1f, 0.1f));
@@ -206,7 +209,7 @@ int main(int argc, char* argv[]) {
             mat_scale(&model, vec3(10000, 10000, 10000));
             shader_data.model = model;
             RL_Draw(context);
-        */
+
         //UPDATING SCREEN TEXTURE FROM CONTEXT'S COLOR BUFFER
         SDL_UpdateTexture(screen_texture, NULL, RL_GetColorBuffer(context), width * sizeof(RL_Color));
         SDL_RenderCopy(renderer, screen_texture, NULL, NULL);
