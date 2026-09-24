@@ -79,9 +79,9 @@ static da_RL_Material parse_mtl(char * fileName, const char *wdir) {
     FILE* fp = NULL;
     if (wdir) {
         char *fullPath = cat_directory(wdir, fileName);
-        fp = fopen(fullPath, "r");
+        fp = fopen(fullPath, "rb");
         free(fullPath);
-    } else fp = fopen(fileName, "r");
+    } else fp = fopen(fileName, "rb");
     if(fp != NULL)
     {
         char line[2048];
@@ -91,7 +91,7 @@ static da_RL_Material parse_mtl(char * fileName, const char *wdir) {
                 sscanf(line, "newmtl %s", mat.name);
                 while (fgets(line, 2048, fp)) {
                     if (!strncmp(line, "newmtl ", 7)) {
-                        fseek(fp, strlen(line)*-1, SEEK_CUR);
+                        fseek(fp, -strlen(line), SEEK_CUR);
                         break;
                     }
                     if (!strncmp(line, "Ns ", 3)) {

@@ -35,7 +35,8 @@ void mat_tex_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data
         if (frag->tri->mtl->texture) frag->color = texture_sample(frag->tri->mtl->texture, frag->tex_coord);
     }
     else {
-        frag->color = texture_sample(RL_GetTexture(context), frag->tex_coord);
+        frag->color = (RL_Color){.uint16 = 0xFFFF};
+        //frag->color = texture_sample(RL_GetTexture(context), frag->tex_coord);
     }
 }
 
@@ -136,7 +137,7 @@ int main(int argc, char* argv[]) {
 
     RL_Texture *placeholder_tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/placeholder.png", RL_ASSET_TYPE_TEXTURE);
 
-    RL_Mesh *doom_map = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/DOOM/DOOM.obj", RL_ASSET_TYPE_MESH);
+    RL_Mesh *doom_map = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/DOOM/DOOM2.obj", RL_ASSET_TYPE_MESH);
     RL_Texture *doom_tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/doom_diffuse.png", RL_ASSET_TYPE_TEXTURE);
 
     int fps = 0;
