@@ -17,13 +17,13 @@ MAIN_LIBS = -L. -lSDL2 -lrasterlib -lm
 all : rasterlib-main
 
 ./src/%.o: ./src/%.c
-	${CC} ${C_FLAGS} ${RASTERLIB_LIB} ${RASTERLIB_INC} -c $< -o $@ ${LIBS}
+	${CC} ${C_FLAGS} ${DEBUG_FLAGS} ${RASTERLIB_LIB} ${RASTERLIB_INC} -c $< -o $@ ${LIBS}
 
 librasterlib.a: ${RASTERLIB_OBJ}
 	ar rcs librasterlib.a ${RASTERLIB_OBJ}
 
 rasterlib-main: ${MAIN_SRC} librasterlib.a
-	${CC} ${C_FLAGS} ${RASTERLIB_INC} -o main ${MAIN_SRC} ${MAIN_LIBS}
+	${CC} ${C_FLAGS} ${DEBUG_FLAGS} ${RASTERLIB_INC} -o main ${MAIN_SRC} ${MAIN_LIBS}
 
 clean:
 	rm ${RASTERLIB_OBJ}; rm vgcore.*

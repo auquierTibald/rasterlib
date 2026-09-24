@@ -1,5 +1,6 @@
 #include "rasterlib.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +8,10 @@
 #include "utils.h"
 #include "utils-triangles.h"
 #include "utils-matrix.h"
+#include "thread_pools.h"
+
+#define N_TILES_X 10
+#define N_TILES_Y 10
 
 typedef da(near_clip_result) da_near_clip_result;
 
@@ -37,9 +42,30 @@ typedef struct RL_Context_t {
     RL_ProjectionMode_Kind projection_mode;
 
     da_near_clip_result near_clip_results;
+
+    int tile_size_x, tile_size_y;
+
+    RL_ThreadPool *thread_pool;
+
 } RL_Context;
 
-void draw_fragment(RL_Context* context, RL_Fragment *frag) {
+
+void default_vs(struct RL_Context_t *context, RL_Triangle *triangle, void* user_data)
+{
+    RL_Default_ShaderData data = *(RL_Default_ShaderData*)user_data;
+    const matrix mv = mat_mul(data.view, data.model);
+
+    triangle->pos = mat_apply_triangle3(mv, triangle->pos);
+
+    free(mv.data);
+}
+
+void default_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
+    //color = texture_sample(context->texture, tex_coord);
+    frag->color = (RL_Color){ .uint16 = 0x0000 };
+}
+
+static void draw_fragment(RL_Context* context, RL_Fragment *frag) {
     vec3 depths = vec3(frag->tri->pos.a.z, frag->tri->pos.b.z, frag->tri->pos.c.z);
     frag->depth = 1 / dot3(vec3(1 / depths.x, 1 / depths.y, 1 / depths.z), frag->barycentric_coord);
 
@@ -58,7 +84,167 @@ void draw_fragment(RL_Context* context, RL_Fragment *frag) {
     context->depth_buffer[screen_index(context->width, frag->pos)] = frag->depth;
 }
 
-void draw_triangle(RL_Context* context, RL_Triangle *tri) {
+static void execute_task(RL_Context *context, RL_Task task) {
+
+    ivec2 v1 = ivec2( (int)task.tri->pos.a.x, (int)task.tri->pos.a.y);
+    ivec2 v2 = ivec2( (int)task.tri->pos.b.x, (int)task.tri->pos.b.y);
+    ivec2 v3 = ivec2( (int)task.tri->pos.c.x, (int)task.tri->pos.c.y);
+
+
+    int A12 = v1.y - v2.y, B12 = v2.x - v1.x;
+    int A23 = v2.y - v3.y, B23 = v3.x - v2.x;
+    int A31 = v3.y - v1.y, B31 = v1.x - v3.x;
+
+    ivec2 start = ivec2(task.minx, task.miny);
+    int w1_row = iSignedAreaTriangle(v2, v3, start);
+    int w2_row = iSignedAreaTriangle(v3, v1, start);
+    int w3_row = iSignedAreaTriangle(v1, v2, start);
+
+    for (int y = task.miny; y < task.maxy; y++) {
+        ivec3 weights = ivec3(w1_row, w2_row, w3_row);
+
+        for(int x = task.minx ; x < task.maxx; x++) {
+            RL_Fragment frag = {.tri = task.tri, .pos = ivec2(x, y), .barycentric_coord = barycentric_coordinates(weights)};
+            frag.barycentric_coord = pointInTriangle(weights);
+            if ( !(frag.barycentric_coord.x == 0 && frag.barycentric_coord.y == 0 && frag.barycentric_coord.z == 0) ){
+                //RL_LockMutex(&context->mutex);
+                //da_append(&context->fragment_buffers[frag.pos.y / context->height / (N_THREADS-1)], RL_Fragment, frag);
+                draw_fragment(context, &frag);
+                //RL_UnlockMutex(&context->mutex);
+            }
+            weights.x += A23;
+            weights.y += A31;
+            weights.z += A12;
+        }
+
+        w1_row += B23;
+        w2_row += B31;
+        w3_row += B12;
+    }
+}
+
+RL_Context* RL_CreateContext(int width, int heigth)
+{
+    RL_Context* context = malloc(sizeof(RL_Context));
+    memset(context, '\0', sizeof(RL_Context));
+    context->width = width;
+    context->height = heigth;
+    context-> ratio = (float)heigth / (float)width;
+
+    context->tile_size_x = context->width / N_TILES_X;
+    context->tile_size_y = context->height / N_TILES_Y;
+
+    context->thread_pool = RL_CreateThreadPool(context, N_TILES_X * N_TILES_Y, execute_task);
+
+    context->mutex = RL_CreateMutex();
+
+    context->vertex_shader = default_vs;
+    context->fragment_shader = default_fs;
+
+    context->color_buffer = (RL_Color*)malloc(width * heigth * sizeof(RL_Color));
+    context->depth_buffer = (float*)malloc(width * heigth * sizeof(float));
+
+    context->input_buffer = (da_RL_Triangle)da_alloc(RL_Triangle, 1);
+    for (size_t i = 0; i < N_THREADS; i++) context->fragment_buffers[i] = (da_RL_Fragment)da_alloc(RL_Fragment, 1);
+
+    context->asset_manager = (RL_AssetManager)da_alloc(RL_Asset, 1);
+    context->near_clip_results = (da_near_clip_result)da_alloc(near_clip_result, 1);
+
+    context->projection_mode = RL_PROJECTION_MODE_NONE;
+
+    return context;
+}
+
+
+void RL_DestroyContext(RL_Context* context)
+{
+    RL_DestroyThreadPool(context->thread_pool);
+    RL_DestroyMutex(&context->mutex);
+    if (context->color_buffer) free(context->color_buffer);
+    if (context->depth_buffer) free(context->depth_buffer);
+    if (context->input_buffer.data) da_free(&(context->input_buffer));
+    if (context->asset_manager.data) da_free(&context->asset_manager);
+    if (context->near_clip_results.data) da_free(&context->near_clip_results);
+    for (size_t i = 0; i < N_THREADS; i++) da_free(&context->fragment_buffers[i]);
+    free(context);
+}
+
+static void bin_triangle(RL_Context* context, RL_Triangle *tri) {
+    //2D POINTS
+    ivec2 v1 = ivec2( (int)tri->pos.a.x, (int)tri->pos.a.y);
+    ivec2 v2 = ivec2( (int)tri->pos.b.x, (int)tri->pos.b.y);
+    ivec2 v3 = ivec2( (int)tri->pos.c.x, (int)tri->pos.c.y);
+
+    int minx = min3(v1.x, v2.x, v3.x); clamp(&minx, 0, context->width);
+    int miny = min3(v1.y, v2.y, v3.y); clamp(&miny, 0, context->height);
+    int maxx = max3(v1.x, v2.x, v3.x); clamp(&maxx, 0, context->width);
+    int maxy = max3(v1.y, v2.y, v3.y); clamp(&maxy, 0, context->height);
+
+    int tile_minx = floorf((float)minx / (float)context->tile_size_x);
+    int tile_miny = floorf((float)miny / (float)context->tile_size_y);
+
+    int tile_maxx = ceilf((float)maxx / (float)context->tile_size_x);
+    int tile_maxy = ceilf((float)maxy / (float)context->tile_size_y);
+
+    printf("tiles intersection : %d %d %d %d\n", tile_minx, tile_miny, tile_maxx, tile_maxy);
+
+    if (tile_miny == tile_maxy) {
+        if (tile_minx == tile_maxx) {
+            printf("x : %d, y : %d\n", tile_minx, tile_miny);
+            const RL_Task task = {
+                .tri = tri,
+                .minx = tile_minx * context->tile_size_x, .miny = tile_miny * context->tile_size_y,
+                .maxx = tile_minx * context->tile_size_x, .maxy = tile_miny * context->tile_size_y,
+            };
+
+            printf("adding task to thread n %d\n", tile_miny * N_TILES_X + tile_minx);
+            RL_AddTask(context->thread_pool, tile_miny * N_TILES_X + tile_minx, task);
+        } else {
+            for(int x = tile_minx; x < tile_maxx; x++) {
+                printf("x : %d, y : %d\n", x, tile_miny);
+                const RL_Task task = {
+                    .tri = tri,
+                    .minx = x * context->tile_size_x * context->tile_size_x, .miny = tile_miny * context->tile_size_y,
+                    .maxx = (x+1) * context->tile_size_x * context->tile_size_x, .maxy = tile_miny * context->tile_size_y,
+                };
+
+                printf("adding task to thread n %d\n", tile_miny * N_TILES_X + x);
+                RL_AddTask(context->thread_pool, tile_miny * N_TILES_X + x, task);
+            }
+        }
+    } else {
+        if (tile_minx == tile_maxx) {
+            for(int y = tile_miny; y < tile_maxy; y++) {
+                printf("x : %d, y : %d\n", tile_minx, y);
+                const RL_Task task = {
+                    .tri = tri,
+                    .minx = tile_minx * context->tile_size_x, .miny = y * context->tile_size_y,
+                    .maxx = tile_minx * context->tile_size_x, .maxy = (y+1) * context->tile_size_y,
+                };
+
+                printf("adding task to thread n %d\n", tile_miny * N_TILES_X + tile_minx);
+                RL_AddTask(context->thread_pool, tile_miny * N_TILES_X + tile_minx, task);
+            }
+        } else {
+            for(int y = tile_miny; y < tile_maxy; y++) {
+                for(int x = tile_minx; x < tile_maxx; x++) {
+                    printf("x : %d, y : %d\n", x, y);
+                    const RL_Task task = {
+                        .tri = tri,
+                        .minx = x * context->tile_size_x, .miny = y * context->tile_size_y,
+                        .maxx = (x+1) * context->tile_size_x, .maxy = (y+1) * context->tile_size_y,
+                    };
+
+                    printf("adding task to thread n %d\n", y * N_TILES_X + x);
+                    RL_AddTask(context->thread_pool, y * N_TILES_X + x, task);
+                }
+            }
+        }
+    }
+
+}
+
+static void draw_triangle(RL_Context* context, RL_Triangle *tri) {
     //2D POINTS
     ivec2 v1 = ivec2( (int)tri->pos.a.x, (int)tri->pos.a.y);
     ivec2 v2 = ivec2( (int)tri->pos.b.x, (int)tri->pos.b.y);
@@ -102,57 +288,6 @@ void draw_triangle(RL_Context* context, RL_Triangle *tri) {
 
 }
 
-void default_vs(struct RL_Context_t *context, RL_Triangle *triangle, void* user_data)
-{
-    RL_Default_ShaderData data = *(RL_Default_ShaderData*)user_data;
-    const matrix mv = mat_mul(data.view, data.model);
-
-    triangle->pos = mat_apply_triangle3(mv, triangle->pos);
-
-    free(mv.data);
-}
-
-void default_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
-    //color = texture_sample(context->texture, tex_coord);
-    frag->color = (RL_Color){ .uint16 = 0x0000 };
-}
-
-
-RL_Context* RL_CreateContext(int width, int heigth)
-{
-    RL_Context* context = malloc(sizeof(RL_Context));
-    memset(context, '\0', sizeof(RL_Context));
-    context->width = width;
-    context->height = heigth;
-    context-> ratio = (float)heigth / (float)width;
-
-    context->mutex = RL_CreateMutex();
-
-    context->vertex_shader = default_vs;
-    context->fragment_shader = default_fs;
-
-    context->color_buffer = (RL_Color*)malloc(width * heigth * sizeof(RL_Color));
-    context->depth_buffer = (float*)malloc(width * heigth * sizeof(float));
-
-    context->input_buffer = (da_RL_Triangle)da_alloc(RL_Triangle, 1);
-    for (size_t i = 0; i < N_THREADS; i++) context->fragment_buffers[i] = (da_RL_Fragment)da_alloc(RL_Fragment, 1);
-
-    context->asset_manager = (RL_AssetManager)da_alloc(RL_Asset, 1);
-    context->near_clip_results = (da_near_clip_result)da_alloc(near_clip_result, 1);
-
-    context->projection_mode = RL_PROJECTION_MODE_NONE;
-
-    return context;
-}
-
-void RL_DestroyContext(RL_Context* context)
-{
-    if (context->color_buffer) free(context->color_buffer);
-    if (context->depth_buffer) free(context->depth_buffer);
-    if (context->input_buffer.data) da_free(&(context->input_buffer));
-    free(context);
-}
-
 void RL_ProjectionMode(RL_Context* context, RL_ProjectionMode_Kind mode)
 {
     context->projection_mode = mode;
@@ -168,7 +303,7 @@ void RL_SetDisplay(RL_Context* context, int width, int heigth)
     if (context->depth_buffer) free(context->depth_buffer);
 
     context->color_buffer = malloc(width * heigth * sizeof(RL_Color));
-    context->depth_buffer = malloc(width * heigth * sizeof(double));
+    context->depth_buffer = malloc(width * heigth * sizeof(float));
 }
 
 void RL_GetDisplay(RL_Context* context, int *width, int *heigth)
@@ -300,14 +435,14 @@ void RL_Draw(RL_Context* context) {
         context->vertex_shader(context, element, context->user_data);
         switch (context->projection_mode) {
             default: break;
-            case RL_PROJECTION_MODE_NONE: draw_triangle(context, element); break;
+            case RL_PROJECTION_MODE_NONE: bin_triangle(context, element); break;
             case RL_PROJECTION_MODE_PERSPECTIVE: {
                 const near_clip_result result = near_clip_triangle(context, element);
                 if ( result.triangles ) {
                     for (size_t i = 0; i < result.triangle_count; i++) {
                         //PROJECT TRIANGLE
                         result.triangles[i].pos = project_triangle(context, result.triangles[i].pos);
-                        draw_triangle(context, &result.triangles[i]);
+                        bin_triangle(context, &result.triangles[i]);
                     }
                     da_append(&context->near_clip_results, near_clip_result, result);
                 }
@@ -316,7 +451,19 @@ void RL_Draw(RL_Context* context) {
             case RL_PROJECTION_MODE_ORTHOGRAPHIC: printf("TODO: Orthographic Projection isn't implemented.\n"); exit(1);
         }
     }
-    //create_and_call_buckets(context, context->input_buffer.size,   (RL_ThreadFunction) call_vertex_bucket);
+
+    while (true) {
+        bool flag = true;
+        for (size_t i = 0; i < context->thread_pool->n_threads; i++) {
+            if (context->thread_pool->queues[i].size > 0) {
+                flag = false;
+                break;
+            }
+        }
+        if (flag) break;
+    }
+    /*
+    create_and_call_buckets(context, context->input_buffer.size,   (RL_ThreadFunction) call_vertex_bucket);
 
     for (size_t i = 0; i < N_THREADS; i++) {
         context->buckets[i] = (RL_Bucket){
@@ -330,5 +477,7 @@ void RL_Draw(RL_Context* context) {
         RL_JoinThread(context->threads[i]);
         RL_DestroyThread(context->threads[i]);
     }
+    */
     da_foreach(&context->near_clip_results, near_clip_result) free(element->triangles);
+
 }

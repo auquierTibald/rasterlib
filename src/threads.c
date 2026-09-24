@@ -20,7 +20,7 @@
         RL_Thread new_thread;
         pthread_create(&new_thread, 0, thread_function, thread_parameter);
         return new_thread;
-    }
+     }
      RL_Thread_RetValue RL_JoinThread(RL_Thread thread) { return pthread_join(thread, NULL); }
      void RL_DestroyThread(RL_Thread thread)            { }
 
