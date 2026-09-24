@@ -6,7 +6,7 @@
 #include "typedefs.h"
 #include "assets_loaders.h"
 
-#define N_THREADS 64
+#define N_THREADS 128
 #define FAR_PLANE 1000000
 
 typedef struct {

@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include "utils-matrix.h"
+#include <math.h>
 
 #undef main
 
@@ -121,10 +122,10 @@ int main(int argc, char* argv[]) {
     float d = 0.0f;
     SDL_Window *window  = SDL_CreateWindow("rasterlib", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600,900, SDL_WINDOW_RESIZABLE);
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
-    SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 1600/8, 900/8);
+    SDL_Texture *screen_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB4444, SDL_TEXTUREACCESS_STREAMING, 1600/4, 900/4);
     SDL_Event event;
 
-    RL_Context *context = RL_CreateContext(1600/8, 900/8);
+    RL_Context *context = RL_CreateContext(1600/4, 900/4);
     RL_AssetManager *am = RL_GetAssetManager(context);
 
     RL_Mesh *skybox_mesh = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/sphere.obj", RL_ASSET_TYPE_MESH);
@@ -169,7 +170,7 @@ int main(int argc, char* argv[]) {
         //RENDERING
         SDL_RenderClear(renderer);
         RL_Clear(context, (RL_Color){.uint16 = 0x0000});
-            /*
+
             RL_MeshData(context, doom_map);
             RL_SetFragmentShader(context, mat_tex_fs);
             RL_SetTexture(context, doom_tex);
@@ -177,7 +178,7 @@ int main(int argc, char* argv[]) {
             mat_scale(&model, vec3(1000, 1000, 1000));
             shader_data.model = model;
             RL_Draw(context);
-            */
+
             //SHREK
             RL_MeshData(context, mesh);
 
@@ -200,7 +201,7 @@ int main(int argc, char* argv[]) {
 
             shader_data.model = model;
             RL_Draw(context);
-
+            /*
             //SKYBOX
             RL_MeshData(context, skybox_mesh);
             RL_SetFragmentShader(context, tex_fs);
@@ -209,7 +210,7 @@ int main(int argc, char* argv[]) {
             mat_scale(&model, vec3(10000, 10000, 10000));
             shader_data.model = model;
             RL_Draw(context);
-
+            */
         //UPDATING SCREEN TEXTURE FROM CONTEXT'S COLOR BUFFER
         SDL_UpdateTexture(screen_texture, NULL, RL_GetColorBuffer(context), width * sizeof(RL_Color));
         SDL_RenderCopy(renderer, screen_texture, NULL, NULL);
