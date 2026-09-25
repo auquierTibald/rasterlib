@@ -33,7 +33,9 @@ RL_Texture *load_texture(const char* filePath)
 {
     RL_Texture *tex = malloc(sizeof(RL_Texture));
     tex->pixels = stbi_load(filePath, &tex->w, &tex->h, &tex->comps, 4);
-    return tex;
+    if ( tex->pixels ) return tex;
+    printf("unable to read from file : %s\n", filePath);
+    return NULL;
 }
 
 void free_texture(RL_Texture tex)
@@ -149,7 +151,6 @@ RL_Mesh *load_mesh(const char* filePath)
     if(fp != NULL)
     {
         ssize_t current_mtl_idx = -1;
-        bool material = false;
         char line[2048];
 
         while (fgets(line, 2048, fp)) {
@@ -192,11 +193,9 @@ RL_Mesh *load_mesh(const char* filePath)
                 da_append(&mesh->i_coords, vec3, face1);
                 da_append(&mesh->i_tex_coords, vec3, face2);
                 da_append(&mesh->i_normals, vec3, face3);
-                if(material) da_append(&mesh->i_materials, ssize_t, current_mtl_idx);
-                else da_append(&mesh->i_materials ,ssize_t, -1);
+                da_append(&mesh->i_materials, ssize_t, current_mtl_idx);
             }
             else if(!strncmp(line, "mtllib ", 7)) {
-                material = true;
                 char mat_fileName[512];
                 sscanf(line, "mtllib %s", mat_fileName);
                 char *dir = get_directory(filePath);
@@ -206,16 +205,14 @@ RL_Mesh *load_mesh(const char* filePath)
                     free(dir);
                 } else mesh->materials = parse_mtl(mat_fileName, NULL);
             }
-            else if (!strncmp(line, "usemtl ", 7) && material) {
+            else if (!strncmp(line, "usemtl ", 7)) {
                 char mat_name[512];
                 sscanf(line, "usemtl %s", mat_name);
-                ssize_t i = 0;
-                da_foreach(&mesh->materials, RL_Material) {
-                    if (!strcmp(mat_name, element->name)) {
+                for (size_t i = 0; i < mesh->materials.size; i++) {
+                    if (!strcmp(mat_name, mesh->materials.data[i].name)) {
                         current_mtl_idx = i;
                         break;
                     }
-                    i++;
                 }
             }
         }

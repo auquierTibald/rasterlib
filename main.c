@@ -32,7 +32,11 @@ void tex_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
 
 void mat_tex_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
     if (frag->tri->mtl) {
-        if (frag->tri->mtl->texture) frag->color = texture_sample(frag->tri->mtl->texture, frag->tex_coord);
+        if (frag->tri->mtl->texture) {
+            frag->color = texture_sample(
+                frag->tri->mtl->texture,
+                frag->tex_coord);
+        }
     }
     else {
         frag->color = (RL_Color){.uint16 = 0xFFFF};
@@ -129,16 +133,16 @@ int main(int argc, char* argv[]) {
     RL_Context *context = RL_CreateContext(1600/4, 900/4);
     RL_AssetManager *am = RL_GetAssetManager(context);
 
-    RL_Mesh *skybox_mesh = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/sphere.obj", RL_ASSET_TYPE_MESH);
-    RL_Texture *skybox_tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/skybox2.png", RL_ASSET_TYPE_TEXTURE);
+    RL_Mesh *skybox_mesh = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/sphere.obj", RL_ASSET_TYPE_MESH);
+    RL_Texture *skybox_tex = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/textures/skybox2.png", RL_ASSET_TYPE_TEXTURE);
 
-    RL_Mesh *mesh = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
-    RL_Texture *tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
+    RL_Mesh *mesh = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
+    RL_Texture *tex = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
 
-    RL_Texture *placeholder_tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/placeholder.png", RL_ASSET_TYPE_TEXTURE);
+    RL_Texture *placeholder_tex = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/textures/placeholder.png", RL_ASSET_TYPE_TEXTURE);
 
-    RL_Mesh *doom_map = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/DOOM/DOOM.obj", RL_ASSET_TYPE_MESH);
-    RL_Texture *doom_tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/doom_diffuse.png", RL_ASSET_TYPE_TEXTURE);
+    RL_Mesh *doom_map = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/DOOM/DOOM.obj", RL_ASSET_TYPE_MESH);
+    RL_Texture *doom_tex = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/textures/doom_diffuse.png", RL_ASSET_TYPE_TEXTURE);
 
     int fps = 0;
     Uint32 last_time = SDL_GetTicks();
@@ -171,9 +175,9 @@ int main(int argc, char* argv[]) {
         //RENDERING
         SDL_RenderClear(renderer);
         RL_Clear(context, (RL_Color){.uint16 = 0x0000});
-
+            /*
             RL_MeshData(context, doom_map);
-            RL_SetFragmentShader(context, mat_tex_fs);
+            RL_SetFragmentShader(context, tex_fs);
             RL_SetTexture(context, doom_tex);
             mat_id_no_alloc(&model, 4);
             mat_scale(&model, vec3(1000, 1000, 1000));
@@ -190,7 +194,7 @@ int main(int argc, char* argv[]) {
             mat_rotate_pitch(&model, d);
             shader_data.model = model;
             RL_Draw(context);
-
+            */
             //BACKGROUND
             RL_TriangleData(context, triangles, N_TRIANGLES);
             RL_SetFragmentShader(context, tex_fs);
@@ -202,7 +206,7 @@ int main(int argc, char* argv[]) {
 
             shader_data.model = model;
             RL_Draw(context);
-            /*
+
             //SKYBOX
             RL_MeshData(context, skybox_mesh);
             RL_SetFragmentShader(context, tex_fs);
@@ -211,7 +215,8 @@ int main(int argc, char* argv[]) {
             mat_scale(&model, vec3(10000, 10000, 10000));
             shader_data.model = model;
             RL_Draw(context);
-            */
+
+
         //UPDATING SCREEN TEXTURE FROM CONTEXT'S COLOR BUFFER
         SDL_UpdateTexture(screen_texture, NULL, RL_GetColorBuffer(context), width * sizeof(RL_Color));
         SDL_RenderCopy(renderer, screen_texture, NULL, NULL);

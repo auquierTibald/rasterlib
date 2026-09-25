@@ -107,10 +107,10 @@ static void execute_task(RL_Context *context, RL_Task task) {
             RL_Fragment frag = {.tri = task.tri, .pos = ivec2(x, y), .barycentric_coord = barycentric_coordinates(weights)};
             frag.barycentric_coord = pointInTriangle(weights);
             if ( !(frag.barycentric_coord.x == 0 && frag.barycentric_coord.y == 0 && frag.barycentric_coord.z == 0) ){
-                //RL_LockMutex(&context->mutex);
+                //RL_LockMutex(&context->thread_pool->mutex);
                 //da_append(&context->fragment_buffers[frag.pos.y / context->height / (N_THREADS-1)], RL_Fragment, frag);
                 draw_fragment(context, &frag);
-                //RL_UnlockMutex(&context->mutex);
+                //RL_UnlockMutex(&context->thread_pool->mutex);
             }
             weights.x += A23;
             weights.y += A31;
@@ -134,7 +134,7 @@ RL_Context* RL_CreateContext(int width, int heigth)
     context->tile_size_x = context->width / N_TILES_X;
     context->tile_size_y = context->height / N_TILES_Y;
 
-    context->thread_pool = RL_CreateThreadPool(context, N_TILES_X * N_TILES_Y, execute_task);
+    context->thread_pool = RL_CreateThreadPool(context, (N_TILES_X + 1) * (N_TILES_Y + 1), execute_task);
 
     context->mutex = RL_CreateMutex();
 
@@ -180,36 +180,38 @@ static void bin_triangle(RL_Context* context, RL_Triangle *tri) {
     int maxx = max3(v1.x, v2.x, v3.x); clamp(&maxx, 0, context->width);
     int maxy = max3(v1.y, v2.y, v3.y); clamp(&maxy, 0, context->height);
 
-    int tile_minx = floorf((float)minx / (float)context->tile_size_x); if (tile_minx == 10) tile_minx = 9;
-    int tile_miny = floorf((float)miny / (float)context->tile_size_y); if (tile_miny == 10) tile_miny = 9;
+    const int tile_minx = (float)minx / (float)context->tile_size_x;
+    const int tile_miny = (float)miny / (float)context->tile_size_y;
 
-    int tile_maxx = floorf((float)maxx / (float)context->tile_size_x); if (tile_maxx == 10) tile_maxx = 9;
-    int tile_maxy = floorf((float)maxy / (float)context->tile_size_y); if (tile_maxy == 10) tile_maxy = 9;
+    const int tile_maxx = (float)maxx / (float)context->tile_size_x;
+    const int tile_maxy = (float)maxy / (float)context->tile_size_y;
 
-    /*printf("tri bbox : %d %d %d %d\n", minx, miny, maxx, maxy);
+    /*
+    printf("tri bbox : %d %d %d %d\n", minx, miny, maxx, maxy);
     printf("tilesizex %d, tilesizey %d\n", context->tile_size_x, context->tile_size_y);
     printf("tiles intersection : %d %d %d %d\n", tile_minx, tile_miny, tile_maxx, tile_maxy);
-	*/
+    */
+
     if (tile_miny == tile_maxy) {
         if (tile_minx == tile_maxx) {
             //printf("case1:\n");
             //printf("x : %d, y : %d\n", tile_minx, tile_miny);
             const RL_Task task = {
                 .tri = tri,
-                .minx = tile_minx * context->tile_size_x, .miny = tile_miny * context->tile_size_y,
-                .maxx = tile_minx * context->tile_size_x, .maxy = tile_miny * context->tile_size_y,
+                .minx = tile_maxx     * context->tile_size_x, .miny = tile_maxy     * context->tile_size_y,
+                .maxx = (tile_maxx+1) * context->tile_size_x, .maxy = (tile_maxy+1) * context->tile_size_y,
             };
 
             //printf("adding task to thread n %d\n", tile_miny * N_TILES_X + tile_minx);
-            RL_AddTask(context->thread_pool, tile_miny * N_TILES_X + tile_minx, task);
+            RL_AddTask(context->thread_pool, tile_maxy * N_TILES_X + tile_maxx, task);
         } else {
             for(int x = tile_minx; x < tile_maxx; x++) {
 		//printf("case2:\n");
                 //printf("x : %d, y : %d\n", x, tile_miny);
                 const RL_Task task = {
                     .tri = tri,
-                    .minx = x * context->tile_size_x * context->tile_size_x, .miny = tile_miny * context->tile_size_y,
-                    .maxx = (x+1) * context->tile_size_x * context->tile_size_x, .maxy = tile_miny * context->tile_size_y,
+                    .minx = x * context->tile_size_x,     .miny = tile_miny     * context->tile_size_y,
+                    .maxx = (x+1) * context->tile_size_x, .maxy = (tile_miny+1) * context->tile_size_y,
                 };
 
                 //printf("adding task to thread n %d\n", tile_miny * N_TILES_X + x);
@@ -223,14 +225,15 @@ static void bin_triangle(RL_Context* context, RL_Triangle *tri) {
                 //printf("x : %d, y : %d\n", tile_minx, y);
                 const RL_Task task = {
                     .tri = tri,
-                    .minx = tile_minx * context->tile_size_x, .miny = y * context->tile_size_y,
-                    .maxx = tile_minx * context->tile_size_x, .maxy = (y+1) * context->tile_size_y,
+                    .minx = tile_minx     * context->tile_size_x, .miny = y * context->tile_size_y,
+                    .maxx = (tile_minx+1) * context->tile_size_x, .maxy = (y+1) * context->tile_size_y,
                 };
 
                 //printf("adding task to thread n %d\n", tile_miny * N_TILES_X + tile_minx);
-                RL_AddTask(context->thread_pool, tile_miny * N_TILES_X + tile_minx, task);
+                RL_AddTask(context->thread_pool, y * N_TILES_X + tile_minx, task);
             }
         } else {
+
             for(int y = tile_miny; y < tile_maxy; y++) {
                 for(int x = tile_minx; x < tile_maxx; x++) {
 		    //printf("case4:\n");
@@ -245,6 +248,7 @@ static void bin_triangle(RL_Context* context, RL_Triangle *tri) {
                     RL_AddTask(context->thread_pool, y * N_TILES_X + x, task);
                 }
             }
+
         }
     }
 
@@ -469,6 +473,7 @@ void RL_Draw(RL_Context* context) {
         }
         if (flag) break;
     }
+    //printf("frame shown\n");
     /*
     create_and_call_buckets(context, context->input_buffer.size,   (RL_ThreadFunction) call_vertex_bucket);
 

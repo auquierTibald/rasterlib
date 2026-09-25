@@ -10,16 +10,16 @@ static void *task_pool_func(void *args) {
     thread_arg *arg = args;
     RL_ThreadPool *pool = arg->pool;
     RL_TaskQueue *queue = &pool->queues[arg->thread];
-    printf("thread %d launched\n", arg->thread);
+    printf("thread %lu launched\n", arg->thread);
     while (pool->active) {
-        //RL_LockMutex(&pool->mutex);
+        RL_LockMutex(&pool->mutex);
 	//printf("queue size  inside thread %d : %lu\n", arg->thread, queue->size);
         if (queue->size > 0) {
             const RL_Task task = queue->data[--queue->size];
             pool->execute_task(pool->context, task);
             //printf("executed task : %d %d %d %d\n", task.minx, task.miny, task.maxx, task.maxy);
         }
-        //RL_UnlockMutex(&pool->mutex);
+        RL_UnlockMutex(&pool->mutex);
     }
     return NULL;
 }
@@ -42,7 +42,7 @@ RL_ThreadPool *RL_CreateThreadPool(RL_Context *context, int n_threads, task_func
         .threads = malloc(n_threads * sizeof(RL_Thread)),
         .queues = malloc(n_threads * sizeof(RL_TaskQueue)),
         .args = malloc(n_threads * sizeof(thread_arg)),
-	.active = true
+	    .active = true
     };
 
     for (size_t i = 0; i < pool->n_threads; i++) {
@@ -55,15 +55,7 @@ RL_ThreadPool *RL_CreateThreadPool(RL_Context *context, int n_threads, task_func
 }
 
 void RL_AddTask(const RL_ThreadPool *pool, const int thread, const RL_Task task) {
-    do {
-        if ((&pool->queues[thread])->size >= (&pool->queues[thread])->capacity) {
-            (&pool->queues[thread])->capacity *= 2;
-            void *new_block = realloc((&pool->queues[thread])->data, (&pool->queues[thread])->capacity * sizeof(RL_Task));
-            if (new_block) (&pool->queues[thread])->data = new_block;
-        }
-        (&pool->queues[thread])->data[(&pool->queues[thread])->size] = (task);
-        (&pool->queues[thread])->size++;
-    } while (0);
+    da_append(&pool->queues[thread], RL_Task, task);
 }
 
 void RL_DestroyThreadPool(RL_ThreadPool *pool) {
