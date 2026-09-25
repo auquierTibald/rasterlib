@@ -117,15 +117,15 @@ static da_RL_Material parse_mtl(char * fileName, const char *wdir) {
                         sscanf(line, "map_Kd %s", tex_name);
                         if (!strchr(tex_name, '/')) {
                             char *fullPath = cat_directory(wdir, tex_name);
-                            printf("loading texture %s\n", fullPath);
+                            //printf("loading texture %s\n", fullPath);
                             mat.texture = load_texture(fullPath);
                             free(fullPath);
                         } else {
-                            printf("loading texture %s\n", tex_name);
+                            //printf("loading texture %s\n", tex_name);
                             mat.texture = load_texture(tex_name);
                         }
                         if (!mat.texture) printf("caca\n");
-                        printf("texture ptr : %p\n", mat.texture);
+                        //printf("texture ptr : %p\n", mat.texture);
                     }
                 }
                 da_append(&materials, RL_Material, mat);
@@ -143,7 +143,7 @@ static da_RL_Material parse_mtl(char * fileName, const char *wdir) {
 
 RL_Mesh *load_mesh(const char* filePath)
 {
-    printf("loading mesh at : %s\n", filePath);
+    //printf("loading mesh at : %s\n", filePath);
     RL_Mesh *mesh = init_mesh();
     FILE* fp = fopen(filePath, "r");
     if(fp != NULL)
@@ -201,7 +201,7 @@ RL_Mesh *load_mesh(const char* filePath)
                 sscanf(line, "mtllib %s", mat_fileName);
                 char *dir = get_directory(filePath);
                 if (dir) {
-                    printf("get_directory: %s\n", dir);
+                    //printf("get_directory: %s\n", dir);
                     mesh->materials = parse_mtl(mat_fileName, dir);
                     free(dir);
                 } else mesh->materials = parse_mtl(mat_fileName, NULL);
