@@ -18,25 +18,21 @@ static float speed = 0.5f;
 static bool running = true;
 static RL_Default_ShaderData shader_data;
 
-void blue_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
+static void blue_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
     frag->color = (RL_Color){.uint16 = 0xF00F};
 }
 
-void white_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
+static void white_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
     frag->color = (RL_Color){.uint16 = 0xFFFF};
 }
 
-void tex_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
+static void tex_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
     frag->color = texture_sample(RL_GetTexture(context), frag->tex_coord);
 }
 
-void mat_tex_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
-    if (frag->tri->mtl) {
-        if (frag->tri->mtl->texture) {
-            frag->color = texture_sample(
-                frag->tri->mtl->texture,
-                frag->tex_coord);
-        }
+static void mat_tex_fs(struct RL_Context_t *context, RL_Fragment *frag, void* user_data) {
+    if (frag->tri->mtl && frag->tri->mtl->texture) {
+            frag->color = texture_sample(frag->tri->mtl->texture, frag->tex_coord);
     }
     else {
         frag->color = (RL_Color){.uint16 = 0xFFFF};
@@ -133,16 +129,16 @@ int main(int argc, char* argv[]) {
     RL_Context *context = RL_CreateContext(1600/4, 900/4);
     RL_AssetManager *am = RL_GetAssetManager(context);
 
-    RL_Mesh *skybox_mesh = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/sphere.obj", RL_ASSET_TYPE_MESH);
-    RL_Texture *skybox_tex = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/textures/skybox2.png", RL_ASSET_TYPE_TEXTURE);
+    RL_Mesh *skybox_mesh = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/sphere.obj", RL_ASSET_TYPE_MESH);
+    RL_Texture *skybox_tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/skybox2.png", RL_ASSET_TYPE_TEXTURE);
 
-    RL_Mesh *mesh = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
-    RL_Texture *tex = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
+    RL_Mesh *mesh = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/shrek.obj", RL_ASSET_TYPE_MESH);
+    RL_Texture *tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/shrek_diffuse.png", RL_ASSET_TYPE_TEXTURE);
 
-    RL_Texture *placeholder_tex = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/textures/placeholder.png", RL_ASSET_TYPE_TEXTURE);
+    RL_Texture *placeholder_tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/placeholder.png", RL_ASSET_TYPE_TEXTURE);
 
-    RL_Mesh *doom_map = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/DOOM/DOOM.obj", RL_ASSET_TYPE_MESH);
-    RL_Texture *doom_tex = RL_LoadAsset(am, "../../Im3dSoftRenderer/assets/textures/doom_diffuse.png", RL_ASSET_TYPE_TEXTURE);
+    RL_Mesh *doom_map = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/DOOM/DOOM.obj", RL_ASSET_TYPE_MESH);
+    RL_Texture *doom_tex = RL_LoadAsset(am, "../Im3dSoftRenderer/assets/textures/doom_diffuse.png", RL_ASSET_TYPE_TEXTURE);
 
     int fps = 0;
     Uint32 last_time = SDL_GetTicks();
@@ -183,7 +179,7 @@ int main(int argc, char* argv[]) {
             mat_scale(&model, vec3(1000, 1000, 1000));
             shader_data.model = model;
             RL_Draw(context);
-            /*
+        /*
             //SHREK
             RL_MeshData(context, mesh);
 
@@ -194,7 +190,7 @@ int main(int argc, char* argv[]) {
             mat_rotate_pitch(&model, d);
             shader_data.model = model;
             RL_Draw(context);
-
+        */
             //BACKGROUND
             RL_TriangleData(context, triangles, N_TRIANGLES);
             RL_SetFragmentShader(context, tex_fs);
@@ -206,7 +202,7 @@ int main(int argc, char* argv[]) {
 
             shader_data.model = model;
             RL_Draw(context);
-
+            /*
             //SKYBOX
             RL_MeshData(context, skybox_mesh);
             RL_SetFragmentShader(context, tex_fs);
