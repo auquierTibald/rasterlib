@@ -175,15 +175,15 @@ int main(int argc, char* argv[]) {
         //RENDERING
         SDL_RenderClear(renderer);
         RL_Clear(context, (RL_Color){.uint16 = 0x0000});
-            /*
+
             RL_MeshData(context, doom_map);
-            RL_SetFragmentShader(context, tex_fs);
+            RL_SetFragmentShader(context, mat_tex_fs);
             RL_SetTexture(context, doom_tex);
             mat_id_no_alloc(&model, 4);
             mat_scale(&model, vec3(1000, 1000, 1000));
             shader_data.model = model;
             RL_Draw(context);
-
+            /*
             //SHREK
             RL_MeshData(context, mesh);
 
@@ -194,7 +194,7 @@ int main(int argc, char* argv[]) {
             mat_rotate_pitch(&model, d);
             shader_data.model = model;
             RL_Draw(context);
-            */
+
             //BACKGROUND
             RL_TriangleData(context, triangles, N_TRIANGLES);
             RL_SetFragmentShader(context, tex_fs);
@@ -215,13 +215,16 @@ int main(int argc, char* argv[]) {
             mat_scale(&model, vec3(10000, 10000, 10000));
             shader_data.model = model;
             RL_Draw(context);
-
+            */
 
         //UPDATING SCREEN TEXTURE FROM CONTEXT'S COLOR BUFFER
         SDL_UpdateTexture(screen_texture, NULL, RL_GetColorBuffer(context), width * sizeof(RL_Color));
         SDL_RenderCopy(renderer, screen_texture, NULL, NULL);
+        //printf("errors : %s\n", SDL_GetError());
 
+        //printf("frame present\n");
         SDL_RenderPresent(renderer);
+        //printf("errors : %s\n", SDL_GetError());
     }
 
     free(model.data);

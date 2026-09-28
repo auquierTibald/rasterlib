@@ -9,7 +9,7 @@
 #include <utils-da.h>
 
 typedef struct {
-    RL_Triangle *tri;
+    RL_Triangle tri;
     int minx, miny, maxx, maxy;
 } RL_Task;
 

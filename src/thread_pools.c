@@ -7,19 +7,18 @@
 
 
 static void *task_pool_func(void *args) {
+
     thread_arg *arg = args;
     RL_ThreadPool *pool = arg->pool;
     RL_TaskQueue *queue = &pool->queues[arg->thread];
     printf("thread %lu launched\n", arg->thread);
     while (pool->active) {
-        RL_LockMutex(&pool->mutex);
-	//printf("queue size  inside thread %d : %lu\n", arg->thread, queue->size);
+	    //printf("queue size  inside thread %d : %lu\n", arg->thread, queue->size);
         if (queue->size > 0) {
             const RL_Task task = queue->data[--queue->size];
             pool->execute_task(pool->context, task);
             //printf("executed task : %d %d %d %d\n", task.minx, task.miny, task.maxx, task.maxy);
         }
-        RL_UnlockMutex(&pool->mutex);
     }
     return NULL;
 }
